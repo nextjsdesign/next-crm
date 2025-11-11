@@ -1,10 +1,15 @@
-export { auth as middleware } from "next-auth";
+import { withAuth } from "next-auth/middleware";
 
+// 🔒 Middleware NextAuth — protejează tot site-ul
+export default withAuth({
+  callbacks: {
+    authorized: ({ token }) => !!token, // ✅ true dacă userul e logat
+  },
+});
+
+// ⚙️ Rute protejate — toate, în afară de /login și /api/auth
 export const config = {
   matcher: [
-    "/",                 // dashboard
-    "/devices/:path*",   // paginile cu dispozitive
-    "/clients/:path*",   // clienți
-    "/users/:path*",     // utilizatori
+    "/((?!api/auth|login).*)", // ⛔ totul e protejat, exceptând login + autentificare NextAuth
   ],
 };
