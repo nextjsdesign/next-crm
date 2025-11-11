@@ -1,45 +1,45 @@
 "use client";
 
+import Sidebar from "@/app/components/Sidebar";
+import Navbar from "@/app/components/Navbar";
 import { useSession } from "next-auth/react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import Sidebar from "../components/Sidebar";
-import Navbar from "../components/Navbar";
 
 export default function ProtectedLayout({ children }) {
   const { data: session, status } = useSession();
-  const pathname = usePathname();
   const router = useRouter();
 
-  // 🔄 Redirecționare automată dacă userul nu e logat
   useEffect(() => {
-    if (status === "unauthenticated" && pathname !== "/login") {
-      router.push("/login");
+    if (status === "unauthenticated") {
+      console.log("🔒 Neautentificat — redirecționez la /login");
+      router.push("/login"); // ✅ schimbat din replace -> push
     }
-  }, [status, pathname, router]);
+  }, [status, router]);
 
-  // ⏳ În timpul verificării — afișăm un loader
+  // 🕑 Afișează loading până se stabilește sesiunea
   if (status === "loading") {
     return (
-      <div className="flex h-screen items-center justify-center text-gray-500">
-        Se verifică sesiunea...
+      <div className="flex items-center justify-center h-screen text-gray-600 dark:text-gray-300">
+        <div className="animate-pulse">Se verifică sesiunea...</div>
       </div>
     );
   }
 
-  // 🔒 Dacă e pagina de login — nu afișăm sidebar/nav
-  if (pathname === "/login") {
-    return children;
-  }
+  // 🔐 Dacă nu există sesiune, nu mai afișăm nimic aici
+  if (status === "unauthenticated") return null;
 
-  // ✅ Dacă userul e autentificat — afișăm CRM-ul complet
+  // ✅ dacă e logat, arătăm tot UI-ul
   return (
-    <>
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-100">
       <Sidebar />
-      <div className="ml-56 min-h-screen flex flex-col">
+
+      <div className="flex-1 flex flex-col overflow-hidden">
         <Navbar />
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6 transition-all duration-300 ease-in-out">
+          {children}
+        </main>
       </div>
-    </>
+    </div>
   );
 }
