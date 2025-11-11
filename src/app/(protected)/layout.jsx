@@ -12,7 +12,7 @@ export default function ProtectedLayout({ children }) {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      console.log("🔒 Neautentificat — redirecționez la /login");
+      console.log("🔒 Neautentificat — redirect la /login");
       router.push("/login");
     }
   }, [status, router]);
@@ -28,12 +28,17 @@ export default function ProtectedLayout({ children }) {
   if (status === "unauthenticated") return null;
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-100">
-      <Sidebar />
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-100 overflow-hidden">
+      {/* 🔹 Sidebar fix */}
+      <div className="w-56 flex-shrink-0">
+        <Sidebar />
+      </div>
 
+      {/* 🔹 Conținut principal */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <Navbar />
-        <main className="flex-1 overflow-y-auto p-6 transition-all duration-300 ease-in-out">
+
+        <main className="flex-1 overflow-y-auto p-6 transition-all duration-300 ease-in-out w-full">
           {children}
         </main>
       </div>
