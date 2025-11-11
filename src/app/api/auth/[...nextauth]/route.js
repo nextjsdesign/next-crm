@@ -1,6 +1,6 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { prisma } from "../../../../lib/prisma";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export const authOptions = {
@@ -12,8 +12,6 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        console.log("🟡 Încearcă autentificarea pentru:", credentials.email);
-
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Completează toate câmpurile.");
         }
@@ -22,18 +20,10 @@ export const authOptions = {
           where: { email: credentials.email },
         });
 
-        if (!user) {
-          console.log("❌ Utilizator inexistent:", credentials.email);
-          throw new Error("Utilizator inexistent.");
-        }
+        if (!user) throw new Error("Utilizator inexistent.");
 
         const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) {
-          console.log("❌ Parolă incorectă pentru:", credentials.email);
-          throw new Error("Parolă incorectă.");
-        }
-
-        console.log("✅ Login reușit pentru:", user.email);
+        if (!isValid) throw new Error("Parolă incorectă.");
 
         return {
           id: user.id,
@@ -44,11 +34,29 @@ export const authOptions = {
       },
     }),
   ],
+
   pages: {
     signIn: "/login",
   },
-  session: { strategy: "jwt" },
+
+  session: {
+    strategy: "jwt",
+    maxAge: 24 * 60 * 60, // 24h
+  },
+
   secret: process.env.NEXTAUTH_SECRET,
+
+  cookies: {
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
 
   callbacks: {
     async jwt({ token, user }) {
@@ -66,7 +74,8 @@ export const authOptions = {
       return session;
     },
   },
-  debug: true,
+
+  debug: false, // dezactivează loguri în producție
 };
 
 const handler = NextAuth(authOptions);
