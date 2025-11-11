@@ -7,22 +7,31 @@ export async function middleware(req) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const { pathname } = req.nextUrl;
 
-  const isAuthPath = pathname.startsWith("/api/auth");
-  const isPublicPath = pathname === "/login" || pathname.startsWith("/_next");
+  // ✅ Permite accesul doar la paginile de login și NextAuth
+  const isAuthPath =
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/_next") ||
+    pathname === "/login" ||
+    pathname === "/favicon.ico";
 
-  // ✅ Lasă pagina de login și NextAuth să treacă
-  if (isAuthPath || isPublicPath) {
+  if (isAuthPath) {
     return NextResponse.next();
   }
 
-  // 🔒 Dacă nu e logat, redirect la /login
+  // 🔒 Dacă nu există token → redirecționează spre /login
   if (!token) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
   }
 
+  // ✅ Dacă e logat, continuă normal
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/auth).*)"],
+  matcher: [
+    // Protejează toate rutele, cu excepția celor publice
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|login).*)",
+  ],
 };
