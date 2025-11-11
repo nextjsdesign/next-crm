@@ -1,26 +1,151 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* 🌙 Stil general */
+html, body {
+  @apply bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen transition-colors duration-300;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* 🔹 Butoane universale */
+.btn-blue {
+  @apply bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 dark:focus:ring-offset-gray-800;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+.btn-gray {
+  @apply bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 px-5 py-2.5 rounded-xl font-medium transition-all duration-200;
+}
+
+/* 🔹 Inputuri și selecturi */
+.input {
+  @apply w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200;
+}
+
+select.input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg fill='none' stroke='gray' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  background-size: 1rem;
+  padding-right: 2.5rem;
+}
+
+textarea.input {
+  @apply min-h-[90px] resize-none;
+}
+
+/* 🔹 Secțiuni (fieldset / wizard boxes) */
+fieldset {
+  @apply border border-gray-200 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-800 shadow-sm p-5 transition-all duration-200;
+}
+legend {
+  @apply text-xs uppercase font-semibold text-gray-500 dark:text-gray-400 tracking-wide;
+}
+
+/* 🔹 Progres bar wizard */
+.progress-track {
+  @apply w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2;
+}
+.progress-bar {
+  @apply bg-blue-600 h-2 rounded-full transition-all duration-500;
+}
+
+/* 🔹 Animații fine */
+.fade-in {
+  animation: fadeIn 0.25s ease-in-out;
+}
+.fade-out {
+  animation: fadeOut 0.25s ease-in-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+/* 🔹 Scrollbar subțire */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 100, 100, 0.4);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 100, 100, 0.6);
+}
+
+/* 🔹 Animație pentru modale */
+.modal-enter {
+  animation: modalEnter 0.3s ease-out;
+}
+.modal-exit {
+  animation: modalExit 0.25s ease-in forwards;
+}
+@keyframes modalEnter {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes modalExit {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.97); }
+}
+
+/* 🔹 Elemente subtile UI */
+.card {
+  @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200;
+}
+.label {
+  @apply text-sm font-medium text-gray-700 dark:text-gray-300;
+}
+
+/* 🔹 Step indicator hover & transition */
+.step-circle {
+  @apply flex items-center justify-center w-10 h-10 rounded-full border-2 font-semibold text-sm transition-all duration-300;
+}
+.step-circle.active {
+  @apply border-blue-600 bg-blue-600 text-white shadow-md;
+}
+.step-circle.inactive {
+  @apply border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500;
+}
+
+/* === ANIMAȚII PAS WIZARD === */
+.step-enter {
+  opacity: 0;
+  transform: translateY(15px);
+  animation: stepEnter 0.35s ease-out forwards;
+}
+
+@keyframes stepEnter {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.step-exit {
+  opacity: 1;
+  transform: translateY(0);
+  animation: stepExit 0.25s ease-in forwards;
+}
+
+@keyframes stepExit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-15px);
+  }
 }
