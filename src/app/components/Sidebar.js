@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   Home,
   Users,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 
 export default function Sidebar() {
+  const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -21,6 +23,16 @@ export default function Sidebar() {
     { name: "Dispozitive", href: "/devices", icon: <Wrench size={18} /> },
     { name: "Fișe", href: "/tickets", icon: <ClipboardList size={18} /> },
   ];
+
+  // 🔄 Afișăm nimic cât timp verifică sesiunea
+  if (status === "loading") {
+    return (
+      <div className="fixed top-0 left-0 w-56 h-full bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 shadow-sm animate-pulse"></div>
+    );
+  }
+
+  // 🚫 Dacă userul nu e logat, nu afișăm sidebar deloc
+  if (!session) return null;
 
   return (
     <>
