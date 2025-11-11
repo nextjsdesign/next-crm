@@ -46,9 +46,13 @@ export const authOptions = {
 
   secret: process.env.NEXTAUTH_SECRET,
 
+  // 🧩 Cookie fix pentru localhost
   cookies: {
     sessionToken: {
-      name: `__Secure-next-auth.session-token`,
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-next-auth.session-token"
+          : "next-auth.session-token",
       options: {
         httpOnly: true,
         sameSite: "lax",
@@ -75,7 +79,7 @@ export const authOptions = {
     },
   },
 
-  debug: false, // dezactivează loguri în producție
+  debug: true, // ✅ activăm debug să vedem loguri în consolă
 };
 
 const handler = NextAuth(authOptions);
