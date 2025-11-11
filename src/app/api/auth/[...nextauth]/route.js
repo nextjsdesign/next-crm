@@ -12,6 +12,8 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        console.log("🟡 Autentificare pentru:", credentials.email);
+
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Completează toate câmpurile.");
         }
@@ -20,10 +22,18 @@ export const authOptions = {
           where: { email: credentials.email },
         });
 
-        if (!user) throw new Error("Utilizator inexistent.");
+        if (!user) {
+          console.log("❌ Utilizator inexistent:", credentials.email);
+          throw new Error("Utilizator inexistent.");
+        }
 
         const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) throw new Error("Parolă incorectă.");
+        if (!isValid) {
+          console.log("❌ Parolă incorectă pentru:", credentials.email);
+          throw new Error("Parolă incorectă.");
+        }
+
+        console.log("✅ Login reușit pentru:", user.email);
 
         return {
           id: user.id,
@@ -46,18 +56,20 @@ export const authOptions = {
 
   secret: process.env.NEXTAUTH_SECRET,
 
-  // 🧩 Cookie fix pentru localhost
+  /**
+   * 🧩 Config cookie adaptiv (funcționează și pe Vercel, și local)
+   * - Local: next-auth.session-token (fără secure)
+   * - Production: next-auth.session-token (fără prefix __Secure)
+   *   deoarece uneori Vercel redirecționează http → https și pierde cookie-ul
+   */
   cookies: {
     sessionToken: {
-      name:
-        process.env.NODE_ENV === "production"
-          ? "__Secure-next-auth.session-token"
-          : "next-auth.session-token",
+      name: "next-auth.session-token",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: process.env.NODE_ENV === "production",
+        secure: process.env.NODE_ENV === "production", // doar pe HTTPS real
       },
     },
   },
@@ -70,6 +82,7 @@ export const authOptions = {
       }
       return token;
     },
+
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id;
@@ -79,7 +92,7 @@ export const authOptions = {
     },
   },
 
-  debug: true, // ✅ activăm debug să vedem loguri în consolă
+  debug: true, // ✅ activ pentru testare (poți dezactiva după ce verificăm)
 };
 
 const handler = NextAuth(authOptions);
