@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 /* 🌙 Stil general */
-html, body {
+html,
+body {
   @apply bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen transition-colors duration-300;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
 }
@@ -17,7 +18,7 @@ html, body {
   @apply bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 px-5 py-2.5 rounded-xl font-medium transition-all duration-200;
 }
 
-/* 🔹 Inputuri și selecturi */
+/* 🔹 Inputuri & selecturi */
 .input {
   @apply w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200;
 }
@@ -35,40 +36,16 @@ textarea.input {
   @apply min-h-[90px] resize-none;
 }
 
-/* 🔹 Secțiuni (fieldset / wizard boxes) */
-fieldset {
-  @apply border border-gray-200 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-800 shadow-sm p-5 transition-all duration-200;
-}
-legend {
-  @apply text-xs uppercase font-semibold text-gray-500 dark:text-gray-400 tracking-wide;
+/* 🔹 Carduri, etichete & componente UI */
+.card {
+  @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200;
 }
 
-/* 🔹 Progres bar wizard */
-.progress-track {
-  @apply w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2;
-}
-.progress-bar {
-  @apply bg-blue-600 h-2 rounded-full transition-all duration-500;
+.label {
+  @apply text-sm font-medium text-gray-700 dark:text-gray-300;
 }
 
-/* 🔹 Animații fine */
-.fade-in {
-  animation: fadeIn 0.25s ease-in-out;
-}
-.fade-out {
-  animation: fadeOut 0.25s ease-in-out forwards;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeOut {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(-8px); }
-}
-
-/* 🔹 Scrollbar subțire */
+/* 🔹 Scrollbar minimalist */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -80,52 +57,11 @@ legend {
   background-color: rgba(100, 100, 100, 0.6);
 }
 
-/* 🔹 Animație pentru modale */
-.modal-enter {
-  animation: modalEnter 0.3s ease-out;
-}
-.modal-exit {
-  animation: modalExit 0.25s ease-in forwards;
-}
-@keyframes modalEnter {
-  from { opacity: 0; transform: scale(0.97); }
-  to { opacity: 1; transform: scale(1); }
-}
-@keyframes modalExit {
-  from { opacity: 1; transform: scale(1); }
-  to { opacity: 0; transform: scale(0.97); }
-}
-
-/* 🔹 Elemente subtile UI */
-.card {
-  @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200;
-}
-.label {
-  @apply text-sm font-medium text-gray-700 dark:text-gray-300;
-}
-
-/* 🔹 Step indicator hover & transition */
-.step-circle {
-  @apply flex items-center justify-center w-10 h-10 rounded-full border-2 font-semibold text-sm transition-all duration-300;
-}
-.step-circle.active {
-  @apply border-blue-600 bg-blue-600 text-white shadow-md;
-}
-.step-circle.inactive {
-  @apply border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500;
-}
-
-/* === ANIMAȚII PAS WIZARD === */
-.step-enter {
-  opacity: 0;
-  transform: translateY(15px);
-  animation: stepEnter 0.35s ease-out forwards;
-}
-
-@keyframes stepEnter {
+/* 🔹 Animații subtile */
+@keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(15px);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
@@ -133,19 +69,12 @@ legend {
   }
 }
 
-.step-exit {
-  opacity: 1;
-  transform: translateY(0);
-  animation: stepExit 0.25s ease-in forwards;
+.animate-fadeIn {
+  animation: fadeIn 0.15s ease-out;
 }
 
-@keyframes stepExit {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-15px);
-  }
+/* 🔹 Mic efect de focus pentru dark mode */
+:focus-visible {
+  outline: 2px solid theme('colors.blue.500');
+  outline-offset: 2px;
 }

@@ -1,16 +1,32 @@
 import "./globals.css";
-import SessionWrapper from "./providers/SessionWrapper";
+import { Inter } from "next/font/google";
+import Providers from "./providers";
+import ThemeProvider from "./theme-provider";
+import { Toaster } from "sonner";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata = {
   title: "CRM Next",
-  description: "ProComputer CRM - Next.js version",
+  description: "Dashboard CRM",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ro">
-      <body className="bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-100 transition-colors">
-        <SessionWrapper>{children}</SessionWrapper>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${inter.className} bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen transition-colors duration-300`}
+      >
+        <ThemeProvider>
+          <Providers>
+            {children}
+            {/* Notificări globale (toasts) */}
+            <Toaster richColors position="top-right" />
+          </Providers>
+        </ThemeProvider>
       </body>
     </html>
   );
