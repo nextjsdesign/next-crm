@@ -1,1109 +1,800 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
-  Eye,
-  Trash2,
-  Plus,
   Search,
-  Loader2,
-  Laptop2,
-  X,
-  UserPlus,
-  ChevronDown,
-  Check,
+  SlidersHorizontal,
+  Columns3,
+  Eye,
+  Pencil,
+  Trash2,
 } from "lucide-react";
-import toast from "react-hot-toast";
 
-// =========================
-//  Mini-modal CLIENT NOU
-// =========================
-function AddClientModal({ onClose, onSave }) {
-  const [client, setClient] = useState({ name: "", phone: "", email: "" });
-  const [saving, setSaving] = useState(false);
+const STATUS_TABS = [
+  { value: "all", label: "Toate" },
+  { value: "Primire", label: "Primire" },
+  { value: "Diagnosticare", label: "Diagnosticare" },
+  { value: "Nspf", label: "NPSF" },
+  { value: "Așteaptă piese", label: "Așteaptă piese" },
+  { value: "În lucru", label: "În lucru" },
+  { value: "Finalizat", label: "Finalizat" },
+  { value: "Predat", label: "Predat" },
+  { value: "Refuzat", label: "Refuzat" },
+];
 
-  const handleChange = (e) => {
-    setClient((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
+const DEFAULT_COLUMNS = {
+  client: true,
+  phone: true,
+  device: true,
+  model: true,
+  status: true,
+  technician: true,
+  price: true,
+  createdAt: true,
+};
 
-  const handleSubmit = async () => {
-    if (!client.name.trim()) {
-      toast.error("Te rog completează numele clientului.");
-      return;
-    }
+const COLUMNS_STORAGE_KEY = "devices_visible_columns_v1";
+const ITEMS_PER_PAGE = 10;
 
-    try {
-      setSaving(true);
-      const res = await fetch("/api/clients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(client),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Eroare la crearea clientului.");
-      }
-
-      toast.success("Client creat cu succes!");
-      onSave(data); // trimitem clientul înapoi la modalul principal
-      onClose();
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-5 border border-gray-200/70 dark:border-gray-700/70 animate-fade-in">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-blue-500" />
-            Adaugă client nou
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-              Nume complet
-            </label>
-            <input
-              name="name"
-              value={client.name}
-              onChange={handleChange}
-              className="input w-full"
-              placeholder="Ex: Popescu Ion"
-              autoFocus
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Telefon
-              </label>
-              <input
-                name="phone"
-                value={client.phone}
-                onChange={handleChange}
-                className="input w-full"
-                placeholder="07xx xxx xxx"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Email
-              </label>
-              <input
-                name="email"
-                type="email"
-                value={client.email}
-                onChange={handleChange}
-                className="input w-full"
-                placeholder="exemplu@client.ro"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3 mt-5">
-          <button onClick={onClose} className="btn-gray">
-            Anulează
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={saving}
-            className="btn-blue"
-          >
-            {saving ? "Se salvează..." : "Salvează client"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// =========================
-//   Pagina principală
-// =========================
 export default function DevicesPage() {
+  const { data: session, status } = useSession();
   const router = useRouter();
-  const { data: session } = useSession();
 
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // modal fișă
-  const [showModal, setShowModal] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  // Număr filtre active
+const activeFilterCount = () => {
+  let c = 0;
+  if (dateFrom) c++;
+  if (dateTo) c++;
+  return c;
+};
 
-  // mini-modal client nou
-  const [showAddClientModal, setShowAddClientModal] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState(DEFAULT_COLUMNS);
+  const [showColumns, setShowColumns] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
-  // client existent
-  const [clientSearch, setClientSearch] = useState("");
-  const [clientResults, setClientResults] = useState([]);
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [clientDevices, setClientDevices] = useState([]);
-  const [searching, setSearching] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // control dropdown altceva
-  const [deviceTypeSelect, setDeviceTypeSelect] = useState("Laptop");
-  const [brandSelect, setBrandSelect] = useState("Asus");
-  const [serviceSelect, setServiceSelect] = useState("Diagnosticare");
-  const [deliveryDays, setDeliveryDays] = useState(3);
-  const [liquidContact, setLiquidContact] = useState("Nu");
-  const [warrantySelect, setWarrantySelect] = useState("30 zile");
-  const [priceConfirmed, setPriceConfirmed] = useState(false);
+  const filterRef = useRef(null);
+  const columnsRef = useRef(null);
 
-  // formular fișă
-  const [form, setForm] = useState({
-    clientName: "",
-    phone: "",
-    email: "",
-    // device
-    deviceTypeOther: "",
-    brandOther: "",
-    deviceType: "",
-    brand: "",
-    model: "",
-    serialNumber: "",
-    charger: "Nu",
-    battery: "Nu",
-    hdd: "Nu",
-    // problemă
-    problem: "",
-    description: "",
-    serviceOther: "",
-    accessCode: "",
-    // service
-    technician: "",
-    status: "Primire",
-    priceEstimate: "",
-    advance: "",
-    notes: "",
-    // derivat
-    deliveryDate: "",
-  });
+  // 🔐 Protecție acces
+  useEffect(() => {
+    if (status === "loading") return;
+    if (!session) {
+      router.push("/login");
+    }
+  }, [status, session, router]);
 
-  const resetForm = () => {
-    setForm({
-      clientName: "",
-      phone: "",
-      email: "",
-      deviceTypeOther: "",
-      brandOther: "",
-      deviceType: "",
-      brand: "",
-      model: "",
-      serialNumber: "",
-      charger: "Nu",
-      battery: "Nu",
-      hdd: "Nu",
-      problem: "",
-      description: "",
-      serviceOther: "",
-      accessCode: "",
-      technician: "",
-      status: "Primire",
-      priceEstimate: "",
-      advance: "",
-      notes: "",
-      deliveryDate: "",
-    });
-    setDeviceTypeSelect("Laptop");
-    setBrandSelect("Asus");
-    setServiceSelect("Diagnosticare");
-    setDeliveryDays(3);
-    setLiquidContact("Nu");
-    setWarrantySelect("30 zile");
-    setPriceConfirmed(false);
-    setSelectedClient(null);
-    setClientSearch("");
-    setClientResults([]);
-    setClientDevices([]);
-  };
+  // 🧩 Încarcă preferințele de coloane din localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = window.localStorage.getItem(COLUMNS_STORAGE_KEY);
+      if (saved) {
+        setVisibleColumns((prev) => ({
+          ...prev,
+          ...JSON.parse(saved),
+        }));
+      }
+    } catch (err) {
+      console.warn("Nu pot citi setările coloanelor:", err);
+    }
+  }, []);
 
-  // încarcă fișele din DB
-  const loadDevices = async () => {
-    const res = await fetch("/api/devices");
-    const data = await res.json();
-    setDevices(data || []);
-    setLoading(false);
+  // 💾 Salvează preferințele de coloane
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        COLUMNS_STORAGE_KEY,
+        JSON.stringify(visibleColumns)
+      );
+    } catch (err) {
+      console.warn("Nu pot salva setările coloanelor:", err);
+    }
+  }, [visibleColumns]);
+
+  // 🔄 Fetch fișe service
+  const fetchDevices = async () => {
+    try {
+      const res = await fetch("/api/devices", { cache: "no-store" });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setDevices(data);
+      } else {
+        console.warn("Răspuns /api/devices neașteptat:", data);
+      }
+    } catch (err) {
+      console.error("Eroare la încărcarea fișelor:", err);
+      toast.error("Eroare la încărcarea fișelor de service");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    loadDevices();
+    if (!session) return;
+    fetchDevices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+
+  // 🔒 închide popover-ele la click în afară
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (filterRef.current && !filterRef.current.contains(e.target)) {
+        setShowFilters(false);
+      }
+      if (columnsRef.current && !columnsRef.current.contains(e.target)) {
+        setShowColumns(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
   }, []);
 
-  // culoare status
-  const getStatusColor = (status) => {
+  // 🎨 Status badge classes
+  const statusBadge = (status) => {
     switch (status) {
-      case "Reparat":
-        return "bg-green-100 text-green-800";
-      case "În așteptare":
-        return "bg-yellow-100 text-yellow-800";
-      case "Garanție":
-        return "bg-blue-100 text-blue-800";
+      case "Primire":
+        return "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300";
+      case "Diagnosticare":
+        return "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300";
+      case "Nspf":
+        return "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300";
+      case "Așteaptă piese":
+        return "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300";
+      case "În lucru":
+        return "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300";
+      case "Finalizat":
+        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300";
+      case "Predat":
+        return "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300";
       case "Refuzat":
-        return "bg-red-100 text-red-800";
+        return "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "bg-gray-100 text-gray-700 dark:bg-gray-600/30 dark:text-gray-300";
     }
   };
 
-  // căutare clienți
-  const searchClients = async (query) => {
-    setClientSearch(query);
-    if (!query || query.length < 2) {
-      setClientResults([]);
-      return;
+  // 🧮 Filtrare fișe
+  const filteredDevices = devices.filter((d) => {
+    // status
+    if (statusFilter !== "all" && d.status !== statusFilter) return false;
+
+    // căutare
+    if (search.trim()) {
+      const term = search.toLowerCase();
+      const clientName =
+        d.clientName ||
+        d.client?.name ||
+        d.client_name ||
+        d.client ||
+        "";
+      const phone =
+        d.clientPhone || d.client?.phone || d.phone || d.telefon || "";
+      const deviceLabel =
+        d.deviceType || d.device || d.device_type || d.deviceName || "";
+      const model = d.model || d.modelName || "";
+      const technician = d.technician || d.user?.name || "";
+
+      const haystack = [
+        clientName,
+        phone,
+        deviceLabel,
+        model,
+        technician,
+        d.status || "",
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      if (!haystack.includes(term)) return false;
     }
 
-    try {
-      setSearching(true);
-      const res = await fetch(`/api/clients/search?q=${encodeURIComponent(query)}`);
-      const data = await res.json();
-      setClientResults(data || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSearching(false);
+    // date
+    if (dateFrom && d.createdAt) {
+      const created = new Date(d.createdAt);
+      if (created < new Date(dateFrom)) return false;
     }
+    if (dateTo && d.createdAt) {
+      const created = new Date(d.createdAt);
+      const endOfDay = new Date(dateTo);
+      endOfDay.setHours(23, 59, 59, 999);
+      if (created > endOfDay) return false;
+    }
+
+    return true;
+  });
+
+  // 👉 reset pagină la schimbarea filtrelor
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, search, dateFrom, dateTo]);
+
+  const totalItems = filteredDevices.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedDevices = filteredDevices.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE
+  );
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "-";
+    const d = new Date(dateString);
+    if (Number.isNaN(d.getTime())) return "-";
+    return d.toLocaleDateString("ro-RO", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
 
-  // select client existent
-  const selectClient = async (client) => {
-    setSelectedClient(client);
-    setClientResults([]);
-    setClientSearch(client.name || "");
-    setForm((prev) => ({
-      ...prev,
-      clientName: client.name || "",
-      phone: client.phone || "",
-      email: client.email || "",
-    }));
-
+  const formatPrice = (value) => {
+    if (value === null || value === undefined) return "-";
     try {
-      const res = await fetch(`/api/devices/history?clientId=${client.id}`);
-      const data = await res.json();
-      setClientDevices(data || []);
+      const num = typeof value === "number" ? value : Number(value);
+      if (Number.isNaN(num)) return "-";
+      return new Intl.NumberFormat("ro-RO", {
+        style: "currency",
+        currency: "RON",
+        maximumFractionDigits: 0,
+      }).format(num);
     } catch {
-      setClientDevices([]);
+      return `${value} lei`;
     }
   };
 
-  // șterge client selectat (reset)
-  const clearSelectedClient = () => {
-    setSelectedClient(null);
-    setClientDevices([]);
-    setClientSearch("");
-    setForm((prev) => ({
-      ...prev,
-      clientName: "",
-      phone: "",
-      email: "",
-    }));
-  };
+  const ActionIconButton = ({ icon: Icon, onClick, title }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className="p-1.5 rounded-md transition text-gray-500 dark:text-gray-400 hover:bg-gray-100 hover:text-blue-600 dark:hover:bg-gray-700"
+    >
+      <Icon size={16} strokeWidth={1.6} />
+    </button>
+  );
 
-  // select device anterior
-  const selectPreviousDevice = (d) => {
-    setForm((prev) => ({
-      ...prev,
-      deviceTypeOther: "",
-      brandOther: "",
-      deviceType: d.deviceType || "",
-      brand: d.brand || "",
-      model: d.model || "",
-      serialNumber: d.serialNumber || "",
-      description: d.description || "",
-      problem: d.problem || "",
-    }));
-    toast.success("Datele dispozitivului au fost completate.");
-  };
-
-  // handle change general
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // submit fișă
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-
-    try {
-      // determinăm tip device & brand finale
-      const finalDeviceType =
-        deviceTypeSelect === "Altceva" ? form.deviceTypeOther : deviceTypeSelect;
-      const finalBrand =
-        brandSelect === "Alt brand" ? form.brandOther : brandSelect;
-
-      // calculăm deliveryDate pe baza termenului în zile
-      const delivery = new Date();
-      delivery.setDate(delivery.getDate() + Number(deliveryDays || 0));
-
-      // construim text accessories
-      const accessories = [
-        form.charger === "Da" ? "Alimentator" : null,
-        form.battery === "Da" ? "Baterie" : null,
-        form.hdd === "Da" ? "HDD" : null,
-      ]
-        .filter(Boolean)
-        .join(", ");
-
-      // servicii solicitate
-      const finalService =
-        serviceSelect === "Altceva"
-          ? form.serviceOther || "Alt serviciu"
-          : serviceSelect;
-
-      // notițe combinate
-      const extraNotes = [
-        form.notes && `Observații interne: ${form.notes}`,
-        finalService && `Servicii solicitate: ${finalService}`,
-        form.accessCode && `Cod acces: ${form.accessCode}`,
-        deliveryDays && `Termen predare: ${deliveryDays} zile`,
-        `Contact cu lichide: ${liquidContact}`,
-        form.advance && `Avans: ${form.advance} lei`,
-        warrantySelect && `Garanție intervenție: ${warrantySelect}`,
-        `Preț confirmat: ${priceConfirmed ? "Da" : "Nu"}`,
-      ]
-        .filter(Boolean)
-        .join(" | ");
-
-      const payload = {
-        clientName: form.clientName,
-        phone: form.phone,
-        email: form.email,
-        deviceType: finalDeviceType,
-        brand: finalBrand,
-        model: form.model,
-        serialNumber: form.serialNumber,
-        problem: form.problem,
-        accessories,
-        description: form.description,
-        technician: form.technician,
-        status: form.status,
-        priceEstimate: form.priceEstimate,
-        notes: extraNotes,
-        deliveryDate: delivery.toISOString(),
-      };
-
-      const res = await fetch("/api/devices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Eroare la salvare.");
-      }
-
-      toast.success("Fișa a fost salvată.");
-      setShowModal(false);
-      resetForm();
-      loadDevices();
-    } catch (err) {
-      console.error(err);
-      toast.error(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // ștergere fișă
-  const handleDelete = async (id) => {
-    if (!confirm("Sigur vrei să ștergi această fișă?")) return;
-    try {
-      const res = await fetch("/api/devices", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Eroare la ștergere.");
-      toast.success("Fișa a fost ștearsă.");
-      loadDevices();
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
-
-  if (!session) {
+  if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-gray-900">
-        <h2 className="text-xl text-gray-700 dark:text-gray-200">
-          🔒 Te rog să te autentifici...
-        </h2>
+      <div className="p-6 text-gray-500 dark:text-gray-300">
+        Se încarcă fișele de service...
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            🔧 Fișe Service
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+            Fișe Service
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Gestionează rapid fișele de service, clienții și istoricul
-            intervențiilor.
+            Vizualizezi și filtrezi fișele de service pentru clienți.
           </p>
         </div>
-        <button
-  onClick={() => router.push("/devices/create")}
-  className="inline-flex items-center gap-2 btn-blue shadow-sm"
->
-  <Plus className="w-5 h-5" />
-  Adaugă fișă
-</button>
       </div>
 
-      {/* Lista fișe */}
-      {loading ? (
-        <p className="text-gray-500">Se încarcă...</p>
-      ) : devices.length === 0 ? (
-        <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-8 text-center text-gray-500 dark:text-gray-400">
-          Nu există încă nicio fișă. Apasă{" "}
-          <span className="font-semibold">„Adaugă fișă”</span> pentru a crea
-          prima fișă de service.
+      {/* Status tabs – stil „segmented control / macOS” */}
+      <div className="rounded-2xl bg-white/70 dark:bg-gray-900/70 border border-gray-200/70 dark:border-gray-700/70 shadow-sm backdrop-blur-sm w-full">
+        <div className="px-2 py-2 sm:px-3 sm:py-3 overflow-x-auto">
+          <div className="flex gap-1.5 sm:gap-2 min-w-max">
+            {STATUS_TABS.map((tab) => {
+              const isActive = statusFilter === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.value)}
+                  className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm border transition whitespace-nowrap
+                    ${
+                      isActive
+                        ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 border-gray-900/80 dark:border-gray-100"
+                        : "bg-gray-100/70 text-gray-700 dark:bg-gray-800/70 dark:text-gray-300 border-transparent hover:bg-gray-200/80 dark:hover:bg-gray-700"
+                    }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Filter bar (search + icons) */}
+      <div className="relative rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-3 sm:p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {/* Search */}
+          <div className="flex-1 min-w-[180px]">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Caută după client, telefon, model, tehnician..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500/70 outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Icons: Filter & Columns */}
+          <div className="flex items-center justify-end gap-2 mt-1 sm:mt-0">
+            {/* Filter */}
+            <div ref={filterRef} className="relative">
+              <button
+  type="button"
+  onClick={() => {
+    setShowFilters((prev) => !prev);
+    setShowColumns(false);
+  }}
+  className="relative inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+>
+  <SlidersHorizontal className="w-4 h-4" />
+
+  {/* 🔵 Badge filtre active */}
+  {activeFilterCount() > 0 && (
+    <span
+      className="
+        absolute -top-1 -right-1
+        bg-blue-600 text-white text-[10px]
+        w-4 h-4 rounded-full
+        flex items-center justify-center
+        shadow-sm
+      "
+    >
+      {activeFilterCount()}
+    </span>
+  )}
+</button>
+
+              {showFilters && (
+                <div className="absolute right-0 mt-2 w-60 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg p-3 text-xs sm:text-sm z-20">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    Filtrare după dată
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                        De la
+                      </span>
+                      <input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                        className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 text-gray-800 dark:text-gray-100 focus:ring-1 focus:ring-blue-500/70 focus:border-blue-500/70 outline-none"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                        Până la
+                      </span>
+                      <input
+                        type="date"
+                        value={dateTo}
+                        onChange={(e) => setDateTo(e.target.value)}
+                        className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 text-gray-800 dark:text-gray-100 focus:ring-1 focus:ring-blue-500/70 focus:border-blue-500/70 outline-none"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDateFrom("");
+                        setDateTo("");
+                      }}
+                      className="mt-1 text-[11px] text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Resetează datele
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Columns */}
+            <div ref={columnsRef} className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowColumns((prev) => !prev);
+                  setShowFilters(false);
+                }}
+                className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              >
+                <Columns3 className="w-4 h-4" />
+              </button>
+
+              {showColumns && (
+                <div className="absolute right-0 mt-2 w-56 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg p-3 text-xs sm:text-sm z-20">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    Afișare coloane
+                  </p>
+                  {Object.entries(visibleColumns).map(([key, value]) => (
+                    <label
+                      key={key}
+                      className="flex items-center gap-2 text-gray-700 dark:text-gray-200 py-0.5"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={value}
+                        onChange={(e) =>
+                          setVisibleColumns((prev) => ({
+                            ...prev,
+                            [key]: e.target.checked,
+                          }))
+                        }
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>
+                        {key === "client"
+                          ? "Client"
+                          : key === "phone"
+                          ? "Telefon"
+                          : key === "device"
+                          ? "Dispozitiv"
+                          : key === "model"
+                          ? "Model"
+                          : key === "status"
+                          ? "Status"
+                          : key === "technician"
+                          ? "Tehnician"
+                          : key === "price"
+                          ? "Preț"
+                          : key === "createdAt"
+                          ? "Data"
+                          : key}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Dacă nu există rezultate */}
+      {totalItems === 0 ? (
+        <div className="text-center text-gray-400 dark:text-gray-500 py-6 text-sm">
+          Nu există fișe care să corespundă filtrării.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-            <thead className="bg-gray-50 dark:bg-gray-800/80">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                  #
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                  Client
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                  Dispozitiv
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                  Data
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">
-                  Acțiuni
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {devices.map((d, i) => (
-                <tr
-                  key={d.id}
-                  className="hover:bg-gray-50/80 dark:hover:bg-gray-800/60 transition-colors"
+        <>
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-100 dark:bg-gray-900/60 text-gray-700 dark:text-gray-300">
+                <tr>
+                  {visibleColumns.client && (
+                    <th className="px-3 py-2 text-left font-medium">Client</th>
+                  )}
+                  {visibleColumns.phone && (
+                    <th className="px-3 py-2 text-left font-medium">
+                      Telefon
+                    </th>
+                  )}
+                  {visibleColumns.device && (
+                    <th className="px-3 py-2 text-left font-medium">
+                      Dispozitiv
+                    </th>
+                  )}
+                  {visibleColumns.model && (
+                    <th className="px-3 py-2 text-left font-medium">Model</th>
+                  )}
+                  {visibleColumns.status && (
+                    <th className="px-3 py-2 text-center font-medium">
+                      Status
+                    </th>
+                  )}
+                  {visibleColumns.technician && (
+                    <th className="px-3 py-2 text-left font-medium">
+                      Tehnician
+                    </th>
+                  )}
+                  {visibleColumns.price && (
+                    <th className="px-3 py-2 text-right font-medium">Preț</th>
+                  )}
+                  {visibleColumns.createdAt && (
+                    <th className="px-3 py-2 text-center font-medium">
+                      Data creării
+                    </th>
+                  )}
+                  <th className="px-3 py-2 text-center font-medium">Acțiuni</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedDevices.map((d, index) => {
+                  const clientName =
+                    d.clientName ||
+                    d.client?.name ||
+                    d.client_name ||
+                    "Client necunoscut";
+                  const phone =
+                    d.clientPhone ||
+                    d.client?.phone ||
+                    d.phone ||
+                    d.telefon ||
+                    "-";
+                  const deviceLabel =
+                    d.deviceType || d.device || d.device_type || "Dispozitiv";
+                  const model = d.model || d.modelName || "-";
+                  const technician = d.technician || d.user?.name || "-";
+                  const price =
+                    d.priceEstimate ??
+                    d.price ??
+                    d.total ??
+                    d.totalPrice ??
+                    null;
+
+                  return (
+                    <tr
+                      key={d.id || index}
+                      className={`border-t border-gray-200 dark:border-gray-700 ${
+                        index % 2 === 0
+                          ? "bg-white dark:bg-gray-900/40"
+                          : "bg-gray-50 dark:bg-gray-900/20"
+                      }`}
+                    >
+                      {visibleColumns.client && (
+                        <td className="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
+                          {clientName}
+                        </td>
+                      )}
+                      {visibleColumns.phone && (
+                        <td className="px-3 py-2 text-gray-700 dark:text-gray-200">
+                          {phone}
+                        </td>
+                      )}
+                      {visibleColumns.device && (
+                        <td className="px-3 py-2 text-gray-700 dark:text-gray-200">
+                          {deviceLabel}
+                        </td>
+                      )}
+                      {visibleColumns.model && (
+                        <td className="px-3 py-2 text-gray-700 dark:text-gray-200">
+                          {model}
+                        </td>
+                      )}
+                      {visibleColumns.status && (
+                        <td className="px-3 py-2 text-center">
+                          <span
+                            className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${statusBadge(
+                              d.status
+                            )}`}
+                          >
+                            {d.status || "—"}
+                          </span>
+                        </td>
+                      )}
+                      {visibleColumns.technician && (
+                        <td className="px-3 py-2 text-gray-700 dark:text-gray-200">
+                          {technician}
+                        </td>
+                      )}
+                      {visibleColumns.price && (
+                        <td className="px-3 py-2 text-right text-gray-800 dark:text-gray-100">
+                          {formatPrice(price)}
+                        </td>
+                      )}
+                      {visibleColumns.createdAt && (
+                        <td className="px-3 py-2 text-center text-gray-600 dark:text-gray-300">
+                          {formatDate(d.createdAt)}
+                        </td>
+                      )}
+                      <td className="px-3 py-2">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <ActionIconButton
+                            icon={Eye}
+                            title="Deschide fișa"
+                            onClick={() => {
+                              if (d.id) {
+                                router.push(`/devices/${d.id}`);
+                              } else {
+                                toast.info("Fișa nu are id disponibil.");
+                              }
+                            }}
+                          />
+                          <ActionIconButton
+                            icon={Pencil}
+                            title="Editează"
+                            onClick={() => {
+                              if (d.id) {
+                                router.push(`/devices/${d.id}?edit=1`);
+                              } else {
+                                toast.info("Fișa nu are id disponibil.");
+                              }
+                            }}
+                          />
+                          <ActionIconButton
+                            icon={Trash2}
+                            title="Șterge"
+                            onClick={() => {
+                              toast.info(
+                                "Ștergerea fișelor o vom configura ulterior."
+                              );
+                            }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="sm:hidden space-y-4">
+            {paginatedDevices.map((d, index) => {
+              const clientName =
+                d.clientName ||
+                d.client?.name ||
+                d.client_name ||
+                "Client necunoscut";
+              const deviceLabel =
+                d.deviceType || d.device || d.device_type || "Dispozitiv";
+              const model = d.model || d.modelName || "-";
+              const technician = d.technician || d.user?.name || "-";
+              const price =
+                d.priceEstimate ?? d.price ?? d.total ?? d.totalPrice ?? null;
+
+              return (
+                <div
+                  key={d.id || index}
+                  className="border border-gray-200 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-800 shadow-sm p-4 space-y-3 w-full"
                 >
-                  <td className="px-4 py-3 text-sm text-gray-500">{i + 1}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
-                    {d.client?.name || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                    {d.deviceType || ""} {d.brand || ""}{" "}
-                    {d.model ? `– ${d.model}` : ""}
-                  </td>
-                  <td className="px-4 py-3">
+                  {/* Header card */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        CLIENT
+                      </p>
+                      <h2 className="font-semibold text-gray-900 dark:text-gray-50 truncate">
+                        {clientName}
+                      </h2>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                        {deviceLabel}
+                        {model ? ` • ${model}` : ""}
+                      </p>
+                    </div>
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
+                      className={`px-2 py-1 rounded-full text-[11px] font-medium ${statusBadge(
                         d.status
                       )}`}
                     >
-                      {d.status}
+                      {d.status || "—"}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                    {new Date(d.createdAt).toLocaleDateString("ro-RO")}
-                  </td>
-                  <td className="px-4 py-3 text-right space-x-2">
-                    <button
-                      onClick={() => router.push(`/devices/${d.id}`)}
-                      className="inline-flex items-center justify-center rounded-full p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
-                      title="Vezi detalii"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(d.id)}
-                      className="inline-flex items-center justify-center rounded-full p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600"
-                      title="Șterge fișa"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* MODAL FIȘĂ SERVICE */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm modal-enter">
-          <div className="w-full max-w-5xl bg-white dark:bg-gray-950 rounded-2xl shadow-2xl border border-gray-200/70 dark:border-gray-800/80 max-h-[92vh] overflow-y-auto animate-fade-in">
-            <form onSubmit={handleSubmit}>
-              <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-gray-200/80 dark:border-gray-800/80 bg-white/90 dark:bg-gray-950/90 backdrop-blur">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    ➕ Fișă service nouă
-                  </h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Completează detaliile clientului, dispozitivului și
-                    intervenției.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowModal(false);
-                      resetForm();
-                    }}
-                    className="btn-gray"
-                  >
-                    Anulează
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="btn-blue"
-                  >
-                    {saving ? "Se salvează..." : "💾 Salvează fișa"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="px-6 py-5 space-y-5">
-                {/* CLIENT */}
-                <section className="bg-gradient-to-r from-slate-50 to-white dark:from-gray-900 dark:to-gray-950 rounded-xl p-5 border border-slate-200 dark:border-gray-800 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide flex items-center gap-2">
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xs font-bold">
-                        1
-                      </span>
-                      Client
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => setShowAddClientModal(true)}
-                      className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
-                    >
-                      <UserPlus className="w-4 h-4" />
-                      Client nou
-                    </button>
                   </div>
 
-                  {/* search client */}
-                  <div className="relative mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="relative flex-1">
-                        <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          placeholder="Caută client existent după nume, telefon, email..."
-                          value={clientSearch}
-                          onChange={(e) => searchClients(e.target.value)}
-                          className="input w-full pl-9"
-                        />
-                      </div>
-                      {selectedClient && (
-                        <button
-                          type="button"
-                          onClick={clearSelectedClient}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300"
-                          title="Șterge clientul selectat"
-                        >
-                          <X className="w-3 h-3" />
-                          Reset client
-                        </button>
-                      )}
-                    </div>
-
-                    {searching && (
-                      <p className="mt-1 text-xs text-gray-500 flex items-center gap-1">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Se caută clienți...
+                  {/* Info row compact */}
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400">
+                        Tehnician
                       </p>
-                    )}
-
-                    {clientResults.length > 0 && (
-                      <div className="absolute z-20 mt-1 w-full max-h-52 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
-                        {clientResults.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => selectClient(c)}
-                            className="w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-sm flex items-center justify-between"
-                          >
-                            <span>
-                              <span className="font-medium">
-                                {c.name || "—"}
-                              </span>
-                              <span className="block text-xs text-gray-500">
-                                {c.phone || "fără telefon"} •{" "}
-                                {c.email || "fără email"}
-                              </span>
-                            </span>
-                            <ChevronDown className="w-4 h-4 text-gray-400 rotate-90" />
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* client selectat + istoricul */}
-                  {selectedClient && (
-                    <div className="mt-3 rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/60 dark:bg-blue-950/30 p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                            ✅ Client selectat: {selectedClient.name}
-                          </p>
-                          <p className="text-xs text-blue-900/80 dark:text-blue-200/80">
-                            ☎ {selectedClient.phone || "—"} • ✉{" "}
-                            {selectedClient.email || "—"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {clientDevices.length > 0 && (
-                        <div className="mt-3">
-                          <p className="text-xs text-blue-900/80 dark:text-blue-200/80 mb-1">
-                            📜 Dispozitive anterioare:
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {clientDevices.map((d) => (
-                              <button
-                                key={d.id}
-                                type="button"
-                                onClick={() => selectPreviousDevice(d)}
-                                className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/80 dark:bg-gray-900/80 border border-blue-100 dark:border-blue-900/50 text-xs text-blue-900 dark:text-blue-100 hover:bg-blue-50 dark:hover:bg-blue-900/70"
-                              >
-                                <Laptop2 className="w-3 h-3" />
-                                {d.brand} {d.model}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                        {technician}
+                      </p>
                     </div>
-                  )}
-
-                  {/* date client - manual / override */}
-                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="label">Nume complet</label>
-                      <input
-                        name="clientName"
-                        value={form.clientName}
-                        onChange={handleChange}
-                        className="input"
-                        placeholder="Nume și prenume"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="label">Email</label>
-                      <input
-                        name="email"
-                        type="email"
-                        value={form.email}
-                        onChange={handleChange}
-                        className="input"
-                        placeholder="email@client.ro"
-                      />
-                    </div>
-                    <div>
-                      <label className="label">Telefon</label>
-                      <input
-                        name="phone"
-                        value={form.phone}
-                        onChange={handleChange}
-                        className="input"
-                        placeholder="07xx xxx xxx"
-                      />
+                    <div className="text-right">
+                      <p className="text-gray-500 dark:text-gray-400">
+                        Preț estimat
+                      </p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">
+                        {formatPrice(price)}
+                      </p>
                     </div>
                   </div>
-                </section>
 
-                {/* DETALII DISPOZITIV */}
-                <section className="bg-gradient-to-r from-slate-50 to-white dark:from-gray-900 dark:to-gray-950 rounded-xl p-5 border border-slate-200 dark:border-gray-800 shadow-sm">
-                  <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-200 uppercase tracking-wide flex items-center gap-2">
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xs font-bold">
-                      2
+                  {/* Program + dată jos, discret */}
+                  <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 border-t border-dashed border-gray-200 dark:border-gray-700 pt-2 mt-1">
+                    <span className="truncate">
+                      {d.workHours
+                        ? `Program tehnician: ${d.workHours}`
+                        : "Program standard"}
                     </span>
-                    Detalii dispozitiv
-                  </h3>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* tip device */}
-                    <div>
-                      <label className="label">Tip device</label>
-                      <div className="flex gap-2">
-                        <select
-                          className="input flex-1"
-                          value={deviceTypeSelect}
-                          onChange={(e) => setDeviceTypeSelect(e.target.value)}
-                        >
-                          <option>Laptop</option>
-                          <option>Telefon</option>
-                          <option>PC</option>
-                          <option>GPS</option>
-                          <option>Altceva</option>
-                        </select>
-                      </div>
-                      {deviceTypeSelect === "Altceva" && (
-                        <input
-                          name="deviceTypeOther"
-                          value={form.deviceTypeOther}
-                          onChange={handleChange}
-                          className="input mt-2"
-                          placeholder="Introduceți tipul dispozitivului"
-                        />
-                      )}
-                    </div>
-
-                    {/* brand */}
-                    <div>
-                      <label className="label">Brand</label>
-                      <select
-                        className="input"
-                        value={brandSelect}
-                        onChange={(e) => setBrandSelect(e.target.value)}
-                      >
-                        <option>Asus</option>
-                        <option>HP</option>
-                        <option>Lenovo</option>
-                        <option>MSI</option>
-                        <option>Gigabyte</option>
-                        <option>Alt brand</option>
-                      </select>
-                      {brandSelect === "Alt brand" && (
-                        <input
-                          name="brandOther"
-                          value={form.brandOther}
-                          onChange={handleChange}
-                          className="input mt-2"
-                          placeholder="Introduceți brandul"
-                        />
-                      )}
-                    </div>
-
-                    {/* model + serie */}
-                    <div>
-                      <label className="label">Model</label>
-                      <input
-                        name="model"
-                        value={form.model}
-                        onChange={handleChange}
-                        className="input"
-                        placeholder="Ex: TUF Gaming F15"
-                      />
-                    </div>
-                    <div>
-                      <label className="label">Serie / IMEI</label>
-                      <input
-                        name="serialNumber"
-                        value={form.serialNumber}
-                        onChange={handleChange}
-                        className="input"
-                        placeholder="Număr serie sau IMEI"
-                      />
-                    </div>
-
-                    {/* accesorii */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:col-span-2 mt-2">
-                      <div>
-                        <label className="label">Alimentator</label>
-                        <select
-                          name="charger"
-                          value={form.charger}
-                          onChange={handleChange}
-                          className="input"
-                        >
-                          <option>Nu</option>
-                          <option>Da</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="label">Baterie</label>
-                        <select
-                          name="battery"
-                          value={form.battery}
-                          onChange={handleChange}
-                          className="input"
-                        >
-                          <option>Nu</option>
-                          <option>Da</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="label">HDD</label>
-                        <select
-                          name="hdd"
-                          value={form.hdd}
-                          onChange={handleChange}
-                          className="input"
-                        >
-                          <option>Nu</option>
-                          <option>Da</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                {/* PROBLEMĂ / SERVICII */}
-                <section className="bg-gradient-to-r from-slate-50 to-white dark:from-gray-900 dark:to-gray-950 rounded-xl p-5 border border-slate-200 dark:border-gray-800 shadow-sm">
-                  <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-200 uppercase tracking-wide flex items-center gap-2">
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xs font-bold">
-                      3
+                    <span className="ml-2 whitespace-nowrap">
+                      {formatDate(d.createdAt)}
                     </span>
-                    Problemă & servicii
-                  </h3>
-
-                  <div className="space-y-3">
-                    <div>
-                      <label className="label">Defect reclamat</label>
-                      <textarea
-                        name="problem"
-                        value={form.problem}
-                        onChange={handleChange}
-                        className="input min-h-[70px]"
-                        placeholder="Descrie pe scurt problema raportată de client"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="label">Observații client</label>
-                      <textarea
-                        name="description"
-                        value={form.description}
-                        onChange={handleChange}
-                        className="input min-h-[60px]"
-                        placeholder="Alte detalii transmise de client..."
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="label">Servicii solicitate</label>
-                        <select
-                          className="input"
-                          value={serviceSelect}
-                          onChange={(e) => setServiceSelect(e.target.value)}
-                        >
-                          <option>Diagnosticare</option>
-                          <option>Reparație</option>
-                          <option>Altceva</option>
-                        </select>
-                        {serviceSelect === "Altceva" && (
-                          <input
-                            name="serviceOther"
-                            value={form.serviceOther}
-                            onChange={handleChange}
-                            className="input mt-2"
-                            placeholder="Scrie serviciul dorit"
-                          />
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="label">Cod de acces</label>
-                        <input
-                          name="accessCode"
-                          value={form.accessCode}
-                          onChange={handleChange}
-                          className="input"
-                          placeholder="PIN / parolă / model"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="label">Termen predare</label>
-                        <select
-                          className="input"
-                          value={deliveryDays}
-                          onChange={(e) => setDeliveryDays(e.target.value)}
-                        >
-                          {Array.from({ length: 15 }).map((_, idx) => (
-                            <option key={idx + 1} value={idx + 1}>
-                              {idx + 1} zile
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="label">Contact cu lichide</label>
-                        <select
-                          className="input"
-                          value={liquidContact}
-                          onChange={(e) => setLiquidContact(e.target.value)}
-                        >
-                          <option>Nu</option>
-                          <option>Da</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                {/* PREȚ & GARANȚIE */}
-                <section className="bg-gradient-to-r from-slate-50 to-white dark:from-gray-900 dark:to-gray-950 rounded-xl p-5 border border-slate-200 dark:border-gray-800 shadow-sm">
-                  <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-200 uppercase tracking-wide flex items-center gap-2">
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xs font-bold">
-                      4
-                    </span>
-                    Preț & garanție
-                  </h3>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="label">Preț estimat</label>
-                      <input
-                        name="priceEstimate"
-                        type="number"
-                        value={form.priceEstimate}
-                        onChange={handleChange}
-                        className="input"
-                        placeholder="Ex: 250"
-                      />
-                    </div>
-                    <div>
-                      <label className="label">Avans</label>
-                      <input
-                        name="advance"
-                        type="number"
-                        value={form.advance}
-                        onChange={handleChange}
-                        className="input"
-                        placeholder="Ex: 50"
-                      />
-                    </div>
-                    <div>
-                      <label className="label">Garanție intervenție</label>
-                      <select
-                        className="input"
-                        value={warrantySelect}
-                        onChange={(e) => setWarrantySelect(e.target.value)}
-                      >
-                        <option>30 zile</option>
-                        <option>90 zile</option>
-                      </select>
-                    </div>
                   </div>
 
-                  <div className="mt-3 flex items-center justify-between flex-wrap gap-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setPriceConfirmed((prev) => !prev)}
-                        className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium border transition-colors ${
-                          priceConfirmed
-                            ? "bg-emerald-500 text-white border-emerald-500"
-                            : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700"
-                        }`}
-                      >
-                        <span
-                          className={`inline-flex h-4 w-4 items-center justify-center rounded-full border ${
-                            priceConfirmed
-                              ? "border-white bg-white/20"
-                              : "border-gray-400"
-                          }`}
-                        >
-                          {priceConfirmed && (
-                            <Check className="w-3 h-3" />
-                          )}
-                        </span>
-                        Preț confirmat la preluare
-                      </button>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <div>
-                        <label className="label">Tehnician</label>
-                        <input
-                          name="technician"
-                          value={form.technician}
-                          onChange={handleChange}
-                          className="input"
-                          placeholder="Nume tehnician"
-                        />
-                      </div>
-                      <div>
-                        <label className="label">Status</label>
-                        <select
-                          name="status"
-                          value={form.status}
-                          onChange={handleChange}
-                          className="input"
-                        >
-                          <option>Primire</option>
-                          <option>În așteptare</option>
-                          <option>Reparat</option>
-                          <option>Refuzat</option>
-                          <option>Garanție</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3">
-                    <label className="label">Observații interne</label>
-                    <textarea
-                      name="notes"
-                      value={form.notes}
-                      onChange={handleChange}
-                      className="input min-h-[60px]"
-                      placeholder="Detalii interne (nu apar pe bonul clientului)..."
+                  {/* Acțiuni mobile */}
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <ActionIconButton
+                      icon={Eye}
+                      title="Deschide fișa"
+                      onClick={() => {
+                        if (d.id) {
+                          router.push(`/devices/${d.id}`);
+                        } else {
+                          toast.info("Fișa nu are id disponibil.");
+                        }
+                      }}
+                    />
+                    <ActionIconButton
+                      icon={Pencil}
+                      title="Editează"
+                      onClick={() => {
+                        if (d.id) {
+                          router.push(`/devices/${d.id}?edit=1`);
+                        } else {
+                          toast.info("Fișa nu are id disponibil.");
+                        }
+                      }}
                     />
                   </div>
-                </section>
-              </div>
-            </form>
+                </div>
+              );
+            })}
           </div>
-        </div>
-      )}
 
-      {/* MINI-MODAL CLIENT NOU */}
-      {showAddClientModal && (
-        <AddClientModal
-          onClose={() => setShowAddClientModal(false)}
-          onSave={(newClient) => {
-            setSelectedClient(newClient);
-            setClientSearch(newClient.name || "");
-            setForm((prev) => ({
-              ...prev,
-              clientName: newClient.name || "",
-              phone: newClient.phone || "",
-              email: newClient.email || "",
-            }));
-          }}
-        />
+          {/* Pagination (doar jos) */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+            <div>
+              {totalItems > 0 && (
+                <span>
+                  Afișate{" "}
+                  <strong>
+                    {startIndex + 1}–
+                    {Math.min(startIndex + ITEMS_PER_PAGE, totalItems)}
+                  </strong>{" "}
+                  din <strong>{totalItems}</strong> fișe
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((p) => Math.max(1, p - 1))
+                }
+                disabled={currentPage === 1}
+                className="px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                «
+              </button>
+              <span className="px-2">
+                Pagina {currentPage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                »
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

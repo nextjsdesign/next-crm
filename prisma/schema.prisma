@@ -7,18 +7,38 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+//
+// ==========================
+//        ENUMURI
+// ==========================
+//
+
+enum Role {
+  admin
+  technician
+  receptionist
+}
+
+//
+// ==========================
+//        MODELE
+// ==========================
+//
+
 model User {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   name      String
   email     String   @unique
   password  String
-  role      String   @default("technician")
-  workHours String?
-  target    Int?
-  bonus     Int?
+  role      Role     @default(technician) // 🎯 enum validat
+  workHours String? // ex: "09:00-17:00"
+  target    Int? // target lunar (lei)
+  bonus     Int? // bonus curent
   createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
+  isActive Boolean @default(true)
 
-  // 🔗 un user poate avea mai multe fișe create
+  // 🔗 Relație: un user poate avea mai multe fișe
   devices Device[]
 }
 
@@ -30,23 +50,35 @@ model Client {
   address   String?
   createdAt DateTime @default(now())
 
-  // 🔗 un client poate avea mai multe dispozitive/fișe
-  devices   Device[]
+  // 🔗 un client poate avea mai multe dispozitive
+  devices Device[]
+}
+
+model Settings {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  companyName String
+  email       String
+  phone       String
+  theme       String   @default("system")
+  logoUrl     String?
+  updatedAt   DateTime @updatedAt
 }
 
 model Device {
-  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
   // 🔗 Relații
-  clientId String  @db.ObjectId
-  client   Client  @relation(fields: [clientId], references: [id])
-  userId   String? @db.ObjectId
-  user     User?   @relation(fields: [userId], references: [id])
-  parentDeviceId  String?  @db.ObjectId // 🔗 legătură cu fișa/dispozitivul anterior
+  clientId String @db.ObjectId
+  client   Client @relation(fields: [clientId], references: [id])
+
+  userId String? @db.ObjectId
+  user   User?   @relation(fields: [userId], references: [id])
+
+  parentDeviceId String? @db.ObjectId // legătură cu fișa anterioară
 
   // 🧾 Tip fișă & status
-  sheetType   String?  // "Nouă" sau "Garanție"
-  status      String   @default("Primire")
+  sheetType String? // "Nouă" / "Garanție"
+  status    String  @default("Primire")
 
   // 🧩 Detalii generale
   deviceType   String?
@@ -62,19 +94,19 @@ model Device {
 
   // 💰 Prețuri & garanții
   priceEstimate  Float?
-  advance        Float? // ➕ avans la predare
-  warranty       String? // 🛠️ "30 zile", "90 zile"
-  priceConfirmed Boolean @default(false) // ✅ preț confirmat la preluare
+  advance        Float?
+  warranty       String? // "30 zile", "90 zile"
+  priceConfirmed Boolean @default(false)
 
   // 🧾 Informații suplimentare
-  liquidContact Boolean   @default(false) // 💧 contact cu lichide
+  liquidContact Boolean   @default(false)
   notes         String?
-  deliveryDays  Int? // ⏱️ termen în zile
+  deliveryDays  Int?
   deliveryDate  DateTime?
 
-  // 🧾 Notă recepție / stare estetică
-  receptionCondition String? // ex: "Zgârieturi ușoare", "Carcasa spartă"
-  receptionNotes     String? // note suplimentare: ex. "urme pe capac, lipsă șurub"
+  // 🧾 Recepție / stare estetică
+  receptionCondition String?
+  receptionNotes     String?
 
-  createdAt     DateTime  @default(now())
+  createdAt DateTime @default(now())
 }

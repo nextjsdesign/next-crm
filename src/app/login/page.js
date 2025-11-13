@@ -24,11 +24,30 @@ export default function LoginPage() {
 
     setLoading(false);
 
+    // ❗ Dacă există o eroare
     if (res?.error) {
+      // 🔍 dacă este eroarea specială de acces blocat (fără diacritice!)
+      if (res.error.startsWith("ACCES_BLOCATI_")) {
+        const parts = res.error.split("_"); // ex: ["ACCES", "BLOCATI", "09:00", "17:00"]
+        const start = parts[2];
+        const end = parts[3];
+
+        setError(`Acces restricționat. Programul tău este între ${start} - ${end}.`);
+        return;
+      }
+
+        if (res.error === "ACCOUNT_DISABLED") {
+      setError("Contul acestui utilizator este dezactivat.");
+      return;
+      }
+
+      // ❌ orice altă eroare — email/parolă
       setError("Email sau parolă incorecte!");
-    } else {
-      router.push("/devices");
+      return;
     }
+
+    // 🔓 Login reușit
+    router.push("/devices");
   };
 
   return (

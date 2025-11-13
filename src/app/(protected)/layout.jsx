@@ -1,4 +1,5 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -17,7 +18,7 @@ export default function ProtectedLayout({ children }) {
 
   useEffect(() => setMounted(true), []);
 
-  // Închide dropdown-ul când se face click în afara lui
+  // 🔹 Închide dropdown-ul când se face click în afara lui
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -28,11 +29,12 @@ export default function ProtectedLayout({ children }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // 🔹 Meniul lateral dinamic în funcție de rol
   const navItems = [
-    { href: "/", label: "Dashboard" },
-    { href: "/clients", label: "Clients" },
-    { href: "/devices", label: "Devices" },
-    { href: "/users", label: "Users" },
+    { href: "/", label: "Dashboard", roles: ["admin", "technician", "receptionist"] },
+    { href: "/clients", label: "Clients", roles: ["admin", "receptionist"] },
+    { href: "/devices", label: "Devices", roles: ["admin", "technician", "receptionist"] },
+    { href: "/users", label: "Users", roles: ["admin"] }, // doar admin
   ];
 
   return (
@@ -47,28 +49,32 @@ export default function ProtectedLayout({ children }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed z-50 lg:static lg:translate-x-0 transform transition-transform backdrop-blur-xl bg-white/70 dark:bg-gray-800/60 shadow-md w-64 flex flex-col ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed z-50 lg:static transform transition-transform backdrop-blur-xl bg-white/70 dark:bg-gray-800/60 shadow-md w-64 flex flex-col ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         <div className="p-4 text-2xl font-bold text-center border-b dark:border-gray-700">
           CRM Next
         </div>
+
+        {/* 🔹 Navigație laterală */}
         <nav className="flex-1 p-4 space-y-2">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setSidebarOpen(false)}
-              className={`block px-3 py-2 rounded-lg transition ${
-                pathname === item.href
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-blue-100 dark:hover:bg-gray-700 dark:text-gray-200"
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {navItems
+            .filter((item) => !item.roles || item.roles.includes(session?.user?.role))
+            .map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setSidebarOpen(false)}
+                className={`block px-3 py-2 rounded-lg transition ${
+                  pathname === item.href
+                    ? "bg-blue-600 text-white"
+                    : "hover:bg-blue-100 dark:hover:bg-gray-700 dark:text-gray-200"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
         </nav>
       </aside>
 
@@ -98,7 +104,7 @@ export default function ProtectedLayout({ children }) {
               {mounted && (theme === "dark" ? <Sun size={20} /> : <Moon size={20} />)}
             </button>
 
-            {/* Avatar */}
+            {/* Avatar + dropdown */}
             {session?.user ? (
               <div className="relative">
                 <img
@@ -110,6 +116,7 @@ export default function ProtectedLayout({ children }) {
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                 />
 
+                {/* 🔹 Dropdown Profil */}
                 {dropdownOpen && (
                   <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 animate-fadeIn">
                     <Link
@@ -119,14 +126,20 @@ export default function ProtectedLayout({ children }) {
                     >
                       🧍‍♂️ Profile
                     </Link>
-                    <Link
-                      href="/settings"
-                      className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-200"
-                      onClick={() => setDropdownOpen(false)}
-                    >
-                      ⚙️ Settings
-                    </Link>
+
+                    {/* ⚙️ Settings mutat aici */}
+                    {session?.user?.role === "admin" && (
+                      <Link
+                        href="/settings"
+                        className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-200"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        ⚙️ Settings
+                      </Link>
+                    )}
+
                     <div className="border-t dark:border-gray-700"></div>
+
                     <button
                       onClick={() => {
                         setDropdownOpen(false);

@@ -7,15 +7,11 @@ export const authOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "text", placeholder: "ex: admin@crm.ro" },
-        password: { label: "Password", type: "password" },
-      },
       async authorize(credentials) {
         console.log("🟡 Autentificare pentru:", credentials.email);
 
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Completează toate câmpurile.");
+          throw new Error("DATE_INCOMPLETE");
         }
 
         const user = await prisma.user.findUnique({
@@ -23,14 +19,42 @@ export const authOptions = {
         });
 
         if (!user) {
-          console.log("❌ Utilizator inexistent:", credentials.email);
-          throw new Error("Utilizator inexistent.");
+          console.log("❌ Utilizator inexistent");
+          throw new Error("USER_INEXISTENT");
         }
 
+        // 🚫 Cont dezactivat → blocăm logarea
+        if (!user.isActive) {
+        console.log("⛔ Cont dezactivat!");
+        throw new Error("ACCOUNT_DISABLED");
+        }
+        
         const isValid = await bcrypt.compare(credentials.password, user.password);
+
         if (!isValid) {
-          console.log("❌ Parolă incorectă pentru:", credentials.email);
-          throw new Error("Parolă incorectă.");
+          console.log("❌ Parolă incorectă");
+          throw new Error("PAROLA_INCORECTA");
+        }
+
+        // 🔒 RESTRICȚIE ORE — DOAR TEHNICIENI
+        if (user.role === "technician" && user.workHours) {
+          const [start, end] = user.workHours.split("-");
+
+          const now = new Date();
+          const current = `${now.getHours().toString().padStart(2, "0")}:${now
+            .getMinutes()
+            .toString()
+            .padStart(2, "0")}`;
+
+          console.log("⏰ Ora curentă:", current, "Program setat:", start, "-", end);
+
+          // verificare interval
+          if (current < start || current > end) {
+            console.log("⛔ ACCES BLOCAT în afara intervalului");
+
+            // ✨ AICI TRIMIT MESAJUL SPECIAL
+            throw new Error(`ACCES_BLOCATI_${start}_${end}`);
+          }
         }
 
         console.log("✅ Login reușit pentru:", user.email);
@@ -45,33 +69,10 @@ export const authOptions = {
     }),
   ],
 
-  pages: {
-    signIn: "/login",
-  },
+  pages: { signIn: "/login" },
 
   session: {
     strategy: "jwt",
-    maxAge: 24 * 60 * 60, // 24h
-  },
-
-  secret: process.env.NEXTAUTH_SECRET,
-
-  /**
-   * 🧩 Config cookie adaptiv (funcționează și pe Vercel, și local)
-   * - Local: next-auth.session-token (fără secure)
-   * - Production: next-auth.session-token (fără prefix __Secure)
-   *   deoarece uneori Vercel redirecționează http → https și pierde cookie-ul
-   */
-  cookies: {
-    sessionToken: {
-      name: "next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production", // doar pe HTTPS real
-      },
-    },
   },
 
   callbacks: {
@@ -84,16 +85,15 @@ export const authOptions = {
     },
 
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id;
-        session.user.role = token.role;
-      }
+      session.user.id = token.id;
+      session.user.role = token.role;
       return session;
     },
   },
 
-  debug: true, // ✅ activ pentru testare (poți dezactiva după ce verificăm)
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);
+
 export { handler as GET, handler as POST };
