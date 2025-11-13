@@ -67,7 +67,7 @@ export default function ProtectedLayout({ children }) {
 
   // 🟢 DACA E LOGAT, ARĂTĂ TOT UI-UL
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 overflow-x-hidden">
       
       {/* Overlay mobil */}
       <div

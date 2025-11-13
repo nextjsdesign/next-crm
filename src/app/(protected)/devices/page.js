@@ -302,30 +302,33 @@ const activeFilterCount = () => {
       </div>
 
       {/* Status tabs – stil „segmented control / macOS” */}
-      <div className="rounded-2xl bg-white/70 dark:bg-gray-900/70 border border-gray-200/70 dark:border-gray-700/70 shadow-sm backdrop-blur-sm w-full">
-        <div className="px-2 py-2 sm:px-3 sm:py-3 overflow-x-auto">
-          <div className="flex gap-1.5 sm:gap-2 min-w-max">
-            {STATUS_TABS.map((tab) => {
-              const isActive = statusFilter === tab.value;
-              return (
-                <button
-                  key={tab.value}
-                  type="button"
-                  onClick={() => setStatusFilter(tab.value)}
-                  className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm border transition whitespace-nowrap
-                    ${
-                      isActive
-                        ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 border-gray-900/80 dark:border-gray-100"
-                        : "bg-gray-100/70 text-gray-700 dark:bg-gray-800/70 dark:text-gray-300 border-transparent hover:bg-gray-200/80 dark:hover:bg-gray-700"
-                    }`}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+<div className="rounded-2xl bg-white/70 dark:bg-gray-900/70 border border-gray-200/70 dark:border-gray-700/70 shadow-sm backdrop-blur-sm w-full">
+  {/* Scroll + Snap */}
+  <div className="px-2 py-2 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory">
+    <div className="flex gap-2 min-w-max">
+      {STATUS_TABS.map((tab) => {
+        const isActive = statusFilter === tab.value;
+        return (
+          <button
+            key={tab.value}
+            type="button"
+            onClick={() => setStatusFilter(tab.value)}
+            className={`
+              snap-start whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm border transition
+              ${
+                isActive
+                  ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 border-gray-900/80 dark:border-gray-100"
+                  : "bg-gray-100/70 text-gray-700 dark:bg-gray-800/70 dark:text-gray-300 border-transparent hover:bg-gray-200/80 dark:hover:bg-gray-700"
+              }
+            `}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+</div>
 
       {/* Filter bar (search + icons) */}
       <div className="relative rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-3 sm:p-4">
