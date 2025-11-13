@@ -11,11 +11,6 @@ const inter = Inter({
   display: "swap",
 });
 
-export const metadata = {
-  title: "CRM Next",
-  description: "Dashboard CRM",
-};
-
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -25,7 +20,8 @@ export default function RootLayout({ children }) {
         <ThemeProvider>
           <Providers>
             {children}
-            {/* Notificări globale (toasts) */}
+
+            {/* Notificări globale */}
             <Toaster richColors position="top-right" />
           </Providers>
         </ThemeProvider>
