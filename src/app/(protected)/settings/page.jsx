@@ -44,21 +44,24 @@ export default function SettingsPage() {
     setSettings((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSave = async () => {
-    try {
-      const res = await fetch("/api/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
-      });
+const handleSave = async () => {
+  try {
+    const res = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...settings,
+        tabStyle: style, // 🔵 trebuie trimis explicit în DB
+      }),
+    });
 
-      if (res.ok) toast.success("✅ Settings saved successfully!");
-      else toast.error("❌ Failed to save settings");
-    } catch (e) {
-      console.error(e);
-      toast.error("❌ Error while saving");
-    }
-  };
+    if (res.ok) toast.success("✅ Settings saved successfully!");
+    else toast.error("❌ Failed to save settings");
+  } catch (e) {
+    console.error(e);
+    toast.error("❌ Error while saving");
+  }
+};
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];

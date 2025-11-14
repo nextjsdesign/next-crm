@@ -61,6 +61,7 @@ model Settings {
   phone       String
   theme       String   @default("system")
   logoUrl     String?
+  tabStyle    String   @default("classic")  // 👈 nou
   updatedAt   DateTime @updatedAt
 }
 

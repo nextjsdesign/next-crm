@@ -262,155 +262,157 @@ const handleSubmit = async (e) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
- {/* === PAS 1: CLIENT === */}
-{step === 1 && (
-  <section className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm step-enter">
-    <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-      <User className="w-5 h-5 text-blue-500" />
-      Client
-    </h3>
+{/* === PAS 1: CLIENT === */}
+          {step === 1 && (
+            <section className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm step-enter">
+              <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                <User className="w-5 h-5 text-blue-500" />
+                Client
+              </h3>
 
-    {/* 🔍 Căutare client + Adăugare */}
-    <div className="flex gap-2 mb-3">
-      <div className="relative flex-1">
-        <input
-          type="text"
-          value={clientSearch}
-          onChange={(e) => searchClients(e.target.value)}
-          placeholder="Caută client existent..."
-          className="input pr-9 text-base py-3"
-        />
-        <Search className="w-4 h-4 text-gray-400 absolute right-3 top-3" />
+              {/* 🔍 Search + buton + integrate în același input */}
+              <div className="relative mb-4">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                />
 
-        {clientResults.length > 0 && (
-          <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-xl">
-            {clientResults.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => selectClient(c)}
-                className="w-full text-left px-3 py-2 hover:bg-blue-50 flex justify-between items-center"
-              >
-                <span>
-                  <span className="font-medium">{c.name}</span>{" "}
-                  <span className="text-gray-500 text-sm">{c.phone}</span>
-                </span>
-                <Check className="w-4 h-4 text-blue-500" />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+                <input
+                  type="text"
+                  value={clientSearch}
+                  onChange={(e) => searchClients(e.target.value)}
+                  placeholder="Caută client după nume sau telefon..."
+                  className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base py-3 pl-10 pr-12 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                />
 
-      <button
-        type="button"
-        onClick={() => setShowAddClientModal(true)}
-        className="btn-blue px-4 py-2 flex items-center gap-2"
-      >
-        <UserPlus className="w-4 h-4" /> Nou
-      </button>
-    </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddClientModal(true)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  <UserPlus className="w-4 h-4" />
+                </button>
 
-    {/* 🔹 Info client selectat */}
-    {selectedClient && (
-      <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4 mb-3">
-        <p className="font-medium text-blue-900 dark:text-blue-100 text-base">
-          {selectedClient.name}
-        </p>
-        <p className="text-sm text-blue-800 dark:text-blue-200">
-          ☎ {selectedClient.phone || "—"} • ✉ {selectedClient.email || "—"}
-        </p>
-      </div>
-    )}
+                {clientResults.length > 0 && (
+                  <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-64 overflow-auto">
+                    {clientResults.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => selectClient(c)}
+                        className="w-full px-3 py-2 flex justify-between items-center text-left hover:bg-blue-50 dark:hover:bg-gray-700 transition"
+                      >
+                        <div>
+                          <span className="font-medium">{c.name}</span>
+                          <span className="text-gray-500 text-sm ml-1">
+                            {c.phone}
+                          </span>
+                        </div>
+                        <Check className="w-4 h-4 text-blue-600" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-    {/* 🔄 Dispozitive anterioare */}
-    {clientDevices.length > 0 && (
-      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 mb-4 border border-gray-200 dark:border-gray-700">
-        <p className="text-sm font-medium mb-2 text-gray-600 dark:text-gray-300">
-          🔄 Selectează dispozitivul pentru care faci fișa:
-        </p>
-        <div className="flex flex-wrap gap-3">
-          {clientDevices.map((d) => (
-            <button
-              key={d.id}
-              type="button"
-              onClick={() => {
-                // ✅ Salvăm datele dispozitivului selectat
-                setForm((prev) => ({
-                  ...prev,
-                  deviceType: d.deviceType || "",
-                  brand: d.brand || "",
-                  model: d.model || "",
-                  serialNumber: d.serialNumber || "",
-                  selectedDeviceId: d.id,
-                }));
+              {/* Client selectat */}
+              {selectedClient && (
+                <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4 mb-4 border border-blue-200 dark:border-blue-800">
+                  <p className="font-semibold text-blue-900 dark:text-blue-100 text-base">
+                    {selectedClient.name}
+                  </p>
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    ☎ {selectedClient.phone || "—"} • ✉{" "}
+                    {selectedClient.email || "—"}
+                  </p>
+                </div>
+              )}
 
-                // 🧮 Calculăm garanția
-                if (d.deliveryDate) {
-                  const garantie = 90;
-                  const diff = Math.floor(
-                    (new Date() - new Date(d.deliveryDate)) /
-                      (1000 * 60 * 60 * 24)
-                  );
-                  const remaining = garantie - diff;
-                  setForm((prev) => ({
-                    ...prev,
-                    warrantyStatus:
-                      remaining > 0
-                        ? `🟢 În garanție (${remaining} zile rămase)`
-                        : "🔴 Garanție expirată",
-                  }));
-                } else {
-                  setForm((prev) => ({
-                    ...prev,
-                    warrantyStatus: "⚪ Fără informații despre livrare",
-                  }));
-                }
+              {/* Dispozitive anterioare */}
+              {clientDevices.length > 0 && (
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700 mb-4">
+                  <p className="text-sm font-medium mb-2 text-gray-600 dark:text-gray-300">
+                    🔄 Selectează un dispozitiv anterior:
+                  </p>
 
-                toast.success(`Dispozitiv ${d.brand} ${d.model} selectat.`);
-              }}
-              className={`px-4 py-2 text-sm rounded-lg border transition-all duration-200 shadow-sm ${
-                form.selectedDeviceId === d.id
-                  ? "bg-blue-600 text-white border-blue-700 shadow-md scale-[1.02]"
-                  : "bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/30"
-              }`}
-            >
-              💻 {d.deviceType} {d.brand} {d.model}
-            </button>
-          ))}
-        </div>
-      </div>
-    )}
+                  <div className="flex flex-wrap gap-3">
+                    {clientDevices.map((d) => (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => {
+                          setForm((prev) => ({
+                            ...prev,
+                            deviceType: d.deviceType || "",
+                            brand: d.brand || "",
+                            model: d.model || "",
+                            serialNumber: d.serialNumber || "",
+                            selectedDeviceId: d.id,
+                          }));
 
-    {/* 🧮 Status garanție */}
-    {form.warrantyStatus && (
-      <div className="mb-4 mt-2">
-        <p
-          className={`text-sm font-medium ${
-            form.warrantyStatus.includes("expirată")
-              ? "text-red-600"
-              : form.warrantyStatus.includes("garanție")
-              ? "text-green-600"
-              : "text-gray-500"
-          }`}
-        >
-          {form.warrantyStatus}
-        </p>
-      </div>
-    )}
+                          if (d.deliveryDate) {
+                            const garantie = 90;
+                            const diff = Math.floor(
+                              (new Date() - new Date(d.deliveryDate)) /
+                                (1000 * 60 * 60 * 24)
+                            );
+                            const remaining = garantie - diff;
 
-    <div className="flex justify-end mt-5">
-      <button
-        type="button"
-        onClick={() => setStep(2)}
-        className="btn-blue px-5 py-2.5 text-base"
-        disabled={!selectedClient}
-      >
-        Continuă ▶
-      </button>
-    </div>
-  </section>
-)}
+                            setForm((prev) => ({
+                              ...prev,
+                              warrantyStatus:
+                                remaining > 0
+                                  ? `🟢 În garanție (${remaining} zile rămase)`
+                                  : "🔴 Garanție expirată",
+                            }));
+                          } else {
+                            setForm((prev) => ({
+                              ...prev,
+                              warrantyStatus: "⚪ Fără informații de livrare",
+                            }));
+                          }
+
+                          toast.success("Dispozitiv selectat.");
+                        }}
+                        className={`px-4 py-2 rounded-lg border shadow-sm transition-all text-sm ${
+                          form.selectedDeviceId === d.id
+                            ? "bg-blue-600 text-white border-blue-700 scale-[1.02]"
+                            : "bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-gray-700"
+                        }`}
+                      >
+                        💻 {d.deviceType} {d.brand} {d.model}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Status garanție */}
+              {form.warrantyStatus && (
+                <p
+                  className={`text-sm font-medium mb-4 ${
+                    form.warrantyStatus.includes("expirată")
+                      ? "text-red-600"
+                      : form.warrantyStatus.includes("garanție")
+                      ? "text-green-600"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {form.warrantyStatus}
+                </p>
+              )}
+
+              <div className="flex justify-end mt-5">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="btn-blue px-5 py-2.5 text-base"
+                  disabled={!selectedClient}
+                >
+                  Continuă ▶
+                </button>
+              </div>
+            </section>
+          )}
 
 {/* === PAS 2: DISPOZITIV === */}
 {step === 2 && (

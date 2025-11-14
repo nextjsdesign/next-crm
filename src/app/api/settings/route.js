@@ -1,22 +1,68 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+// -------------------------
+// GET SETTINGS
+// -------------------------
 export async function GET() {
-  const settings = await prisma.settings.findFirst();
-  return NextResponse.json(settings || {});
+  try {
+    const settings = await prisma.settings.findFirst();
+
+    return NextResponse.json({
+      companyName: settings?.companyName || "",
+      email:       settings?.email || "",
+      phone:       settings?.phone || "",
+      theme:       settings?.theme || "system",
+      logoUrl:     settings?.logoUrl || "",
+      tabStyle:    settings?.tabStyle || "classic",  // 👈 important
+    });
+  } catch (err) {
+    console.error("GET /api/settings error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }
 
+// -------------------------
+// UPDATE / CREATE SETTINGS
+// -------------------------
 export async function POST(req) {
-  const data = await req.json();
+  try {
+    const body = await req.json();
 
-  // dacă nu există în DB, creăm, altfel actualizăm
-  const existing = await prisma.settings.findFirst();
-  const settings = existing
-    ? await prisma.settings.update({
+    const existing = await prisma.settings.findFirst();
+
+    let updated;
+
+    if (existing) {
+      // UPDATE
+      updated = await prisma.settings.update({
         where: { id: existing.id },
-        data,
-      })
-    : await prisma.settings.create({ data });
+        data: {
+          companyName: body.companyName ?? existing.companyName,
+          email:       body.email ?? existing.email,
+          phone:       body.phone ?? existing.phone,
+          theme:       body.theme ?? existing.theme,
+          logoUrl:     body.logoUrl ?? existing.logoUrl,
+          tabStyle:    body.tabStyle ?? existing.tabStyle ?? "classic",
+        },
+      });
+    } else {
+      // CREATE
+      updated = await prisma.settings.create({
+        data: {
+          companyName: body.companyName || "",
+          email:       body.email || "",
+          phone:       body.phone || "",
+          theme:       body.theme || "system",
+          logoUrl:     body.logoUrl || "",
+          tabStyle:    body.tabStyle || "classic",
+        },
+      });
+    }
 
-  return NextResponse.json(settings);
+    return NextResponse.json(updated);
+  } catch (err) {
+    console.error("POST /api/settings error:", err);
+    return NextResponse.json({ error: "Failed to save" }, { status: 500 });
+  }
 }

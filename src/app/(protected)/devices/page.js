@@ -332,41 +332,30 @@ const statusSoftBg = (status) => {
       </div>
       
 {/* Status Tabs – dynamic style */}
-<div className="w-full">
-  {style === "classic" && (
-    <div className="rounded-xl bg-white dark:bg-gray-900 border p-2 flex gap-2 overflow-x-auto no-scrollbar">
-      {STATUS_TABS.map((t) => (
-        <button
-          key={t.value}
-          onClick={() => setStatusFilter(t.value)}
-          className={`
-            px-4 py-1.5 rounded-full text-sm whitespace-nowrap
-            ${
-              statusFilter === t.value
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-            }
-          `}
-        >
-          {t.label}
-        </button>
-      ))}
-    </div>
-  )}
+<div className="w-full flex justify-center">
+  <div className="w-full max-w-4xl mx-auto">
 
-  {style === "glass" && (
-    <div className="rounded-2xl bg-white/20 dark:bg-gray-800/20 backdrop-blur-xl border border-white/40 dark:border-gray-700/40 shadow-lg p-2 overflow-x-auto no-scrollbar">
-      <div className="flex gap-2 min-w-max">
+    {/* CLASSIC */}
+    {style === "classic" && (
+      <div
+        className="
+          rounded-xl bg-white dark:bg-gray-900 border 
+          p-3 sm:p-4 
+          flex gap-2 overflow-x-auto no-scrollbar
+          justify-start sm:justify-center
+          shadow-sm
+        "
+      >
         {STATUS_TABS.map((t) => (
           <button
             key={t.value}
             onClick={() => setStatusFilter(t.value)}
             className={`
-              px-4 py-1.5 rounded-full text-sm whitespace-nowrap backdrop-blur-sm
+              px-4 py-1.5 rounded-full text-sm whitespace-nowrap
               ${
                 statusFilter === t.value
-                  ? "bg-white/70 dark:bg-gray-700/50 text-gray-900 dark:text-white shadow"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-white/30"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
               }
             `}
           >
@@ -374,109 +363,161 @@ const statusSoftBg = (status) => {
           </button>
         ))}
       </div>
-    </div>
-  )}
+    )}
 
-  {style === "ios" && (
-    <div className="rounded-xl bg-gray-200 dark:bg-gray-700 p-1 flex gap-1 overflow-x-auto no-scrollbar">
-      {STATUS_TABS.map((t) => (
-        <button
-          key={t.value}
-          onClick={() => setStatusFilter(t.value)}
-          className={`
-            px-4 py-1 rounded-lg text-sm
-            ${
-              statusFilter === t.value
-                ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow"
-                : "text-gray-600 dark:text-gray-300"
-            }
-          `}
-        >
-          {t.label}
-        </button>
-      ))}
-    </div>
-  )}
+    {/* GLASS */}
+    {style === "glass" && (
+      <div
+        className="
+          rounded-2xl bg-white/20 dark:bg-gray-800/20 
+          backdrop-blur-xl border border-white/40 dark:border-gray-700/40 
+          shadow-lg 
+          p-3 sm:p-4 
+          overflow-x-auto no-scrollbar
+          flex justify-start sm:justify-center
+        "
+      >
+        <div className="flex gap-2 min-w-max">
+          {STATUS_TABS.map((t) => (
+            <button
+              key={t.value}
+              onClick={() => setStatusFilter(t.value)}
+              className={`
+                px-4 py-1.5 rounded-full text-sm whitespace-nowrap backdrop-blur-sm
+                ${
+                  statusFilter === t.value
+                    ? "bg-white/70 dark:bg-gray-700/50 text-gray-900 dark:text-white shadow"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-white/30"
+                }
+              `}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
 
-  {style === "ripple" && (
-    <div className="flex gap-2 overflow-x-auto no-scrollbar p-1">
-      {STATUS_TABS.map((t) => (
-        <button
-          key={t.value}
-          onClick={(e) => {
-            const el = e.currentTarget;
-            const circle = document.createElement("span");
+    {/* iOS */}
+    {style === "ios" && (
+      <div
+        className="
+          rounded-xl bg-gray-200 dark:bg-gray-700 
+          p-2 sm:p-3
+          overflow-x-auto no-scrollbar
+          flex justify-start sm:justify-center
+        "
+      >
+        <div className="flex gap-1 min-w-max">
+          {STATUS_TABS.map((t) => (
+            <button
+              key={t.value}
+              onClick={() => setStatusFilter(t.value)}
+              className={`
+                px-4 py-1 rounded-lg text-sm whitespace-nowrap
+                ${
+                  statusFilter === t.value
+                    ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow"
+                    : "text-gray-600 dark:text-gray-300"
+                }
+              `}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
 
-            const diameter = Math.max(el.clientWidth, el.clientHeight);
-            const radius = diameter / 2;
+    {/* RIPPLE */}
+    {style === "ripple" && (
+      <div
+        className="
+          p-2 sm:p-3 
+          overflow-x-auto no-scrollbar 
+          flex justify-start sm:justify-center
+        "
+      >
+        <div className="flex gap-2 min-w-max">
+          {STATUS_TABS.map((t) => (
+            <button
+              key={t.value}
+              onClick={(e) => {
+                const el = e.currentTarget;
+                const circle = document.createElement("span");
 
-            circle.style.width = circle.style.height = `${diameter}px`;
-            circle.style.left = `${e.clientX - el.offsetLeft - radius}px`;
-            circle.style.top = `${e.clientY - el.offsetTop - radius}px`;
-            circle.classList.add("ripple");
+                const diameter = Math.max(el.clientWidth, el.clientHeight);
+                const radius = diameter / 2;
 
-            const ripple = el.getElementsByClassName("ripple")[0];
-            if (ripple) {
-              ripple.remove();
-            }
+                circle.style.width = circle.style.height = `${diameter}px`;
+                circle.style.left = `${e.clientX - el.offsetLeft - radius}px`;
+                circle.style.top = `${e.clientY - el.offsetTop - radius}px`;
+                circle.classList.add("ripple");
 
-            el.appendChild(circle);
+                const ripple = el.getElementsByClassName("ripple")[0];
+                if (ripple) ripple.remove();
 
-            setStatusFilter(t.value);
-          }}
-          className={`
-            relative overflow-hidden px-4 py-1.5 rounded-full text-sm
-            ${
-              statusFilter === t.value
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-            }
-          `}
-        >
-          {t.label}
-        </button>
-      ))}
-    </div>
-  )}
+                el.appendChild(circle);
 
-{style === "color" && (
-  <div
-    className="
-      w-full rounded-2xl 
-      bg-white/20 dark:bg-gray-800/20 
-      backdrop-blur-xl
-      border border-white/40 dark:border-gray-700/40 
-      shadow-[0_4px_20px_rgba(0,0,0,0.06)]
-      px-3 py-3
-      overflow-x-auto no-scrollbar
-    "
-  >
-    <div className="flex gap-2 min-w-max">
-      {STATUS_TABS.map((t) => {
-        const isActive = statusFilter === t.value;
+                setStatusFilter(t.value);
+              }}
+              className={`
+                relative overflow-hidden px-4 py-1.5 rounded-full text-sm
+                ${
+                  statusFilter === t.value
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                }
+              `}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
 
-        return (
-          <button
-            key={t.value}
-            onClick={() => setStatusFilter(t.value)}
-            className={`
-              px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap
-              transition-all duration-200 border border-transparent
+    {/* COLOR */}
+    {style === "color" && (
+      <div
+        className="
+          w-full rounded-2xl 
+          bg-white/20 dark:bg-gray-800/20 
+          backdrop-blur-xl
+          border border-white/40 dark:border-gray-700/40 
+          shadow-[0_4px_20px_rgba(0,0,0,0.06)]
+          px-4 py-4
+          overflow-x-auto no-scrollbar
+          flex justify-start sm:justify-center
+        "
+      >
+        <div className="flex gap-2 min-w-max">
+          {STATUS_TABS.map((t) => {
+            const isActive = statusFilter === t.value;
 
-              ${
-                isActive
-                  ? statusSoftBg(t.value) + " shadow-sm scale-[1.03]"
-                  : "bg-white/40 dark:bg-gray-700/40 text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-700/60"
-              }
-            `}
-          >
-            {t.label}
-          </button>
-        );
-      })}
-    </div>
+            return (
+              <button
+                key={t.value}
+                onClick={() => setStatusFilter(t.value)}
+                className={`
+                  px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap
+                  transition-all duration-200 border border-transparent
+                  ${
+                    isActive
+                      ? statusSoftBg(t.value) + " shadow-sm scale-[1.03]"
+                      : "bg-white/40 dark:bg-gray-700/40 text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-700/60"
+                  }
+                `}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    )}
+
   </div>
-)}
 </div>
 
 {/* Filter bar (search + filters + create) */}
