@@ -1,16 +1,25 @@
+/* =========================================================
+    Tailwind Base
+========================================================= */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 🌙 Stil general */
+/* =========================================================
+    Reset & Body
+========================================================= */
 html,
 body {
   @apply bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen transition-colors duration-300;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  /* overflow-x: hidden; /* ✅ elimină scroll orizontal pe mobil */
+  overflow-x: hidden; /* 🚫 elimină scroll orizontal */
 }
 
-/* 🔹 Butoane universale */
+/* =========================================================
+    Inputs, Buttons, Form Elements
+========================================================= */
+
+/* Universal buttons */
 .btn-blue {
   @apply bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm hover:shadow-md transition-all duration-200 focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 dark:focus:ring-offset-gray-800;
 }
@@ -19,11 +28,17 @@ body {
   @apply bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 px-5 py-2.5 rounded-xl font-medium transition-all duration-200;
 }
 
-/* 🔹 Inputuri & selecturi */
+/* Inputs */
 .input {
   @apply w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200;
 }
 
+/* textarea */
+textarea.input {
+  @apply min-h-[90px] resize-none;
+}
+
+/* select arrow */
 select.input {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg fill='none' stroke='gray' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
@@ -33,11 +48,14 @@ select.input {
   padding-right: 2.5rem;
 }
 
-textarea.input {
-  @apply min-h-[90px] resize-none;
+/* helper — input cu icon pe stânga */
+.input-with-icon {
+  padding-left: 2.6rem !important;
 }
 
-/* 🔹 Carduri & etichete */
+/* =========================================================
+    Carduri, Etichete
+========================================================= */
 .card {
   @apply w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm transition-all duration-200;
 }
@@ -46,7 +64,9 @@ textarea.input {
   @apply text-sm font-medium text-gray-700 dark:text-gray-300;
 }
 
-/* 🔹 Scrollbar minimalist (doar pe desktop) */
+/* =========================================================
+    Scrollbars (desktop only)
+========================================================= */
 @media (min-width: 640px) {
   ::-webkit-scrollbar {
     width: 8px;
@@ -60,7 +80,18 @@ textarea.input {
   }
 }
 
-/* 🔹 Animație fade-in simplă (pentru dropdowns, modale etc.) */
+/* Minimal scrollbar remove */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* =========================================================
+    Animations
+========================================================= */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -76,46 +107,64 @@ textarea.input {
   animation: fadeIn 0.15s ease-out;
 }
 
-/* 🔹 Focus vizibil în dark mode */
+/* =========================================================
+    Focus Enhancements
+========================================================= */
 :focus-visible {
   outline: 2px solid theme('colors.blue.500');
   outline-offset: 2px;
 }
 
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-* {
-  max-width: 100vw;
+/* =========================================================
+    TAB STYLE: “GLASS”
+========================================================= */
+.glass-blur {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
-/* 🔧 Elimină scroll bar + fix ghost-line la scroll pe iPhone */
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-  border-bottom: 1px solid transparent; /* Previene ghost underline */
-  padding-bottom: 2px; /* Creează spațiu pentru tabs */
+/* =========================================================
+    TAB STYLE: “iOS SEGMENTED”
+========================================================= */
+.ios-segment {
+  background: linear-gradient(180deg, #e5e5e5, #d6d6d6);
+  border-radius: 14px;
+  padding: 2px;
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+.dark .ios-segment {
+  background: linear-gradient(180deg, #555, #444);
 }
 
+.ios-segment button {
+  transition: all 0.2s ease;
+}
+
+/* =========================================================
+    TAB STYLE: “RIPPLE EFFECT”
+========================================================= */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.35);
+  transform: scale(0);
+  animation: ripple 500ms linear;
+  pointer-events: none;
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* =========================================================
+    Snap scroll helper
+========================================================= */
 .snap-x {
   scroll-snap-type: x mandatory;
 }
-
 .snap-start {
   scroll-snap-align: start;
 }
-

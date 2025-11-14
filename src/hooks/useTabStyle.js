@@ -16,9 +16,9 @@ export default function useTabStyle() {
   const [style, setStyle] = useState("classic");
   const [loading, setLoading] = useState(true);
 
-  // 🔵 1. Citește stilul din server (MongoDB)
+  // 🔵 1. Load from server (Mongo)
   useEffect(() => {
-    async function loadServerStyle() {
+    async function load() {
       try {
         const res = await fetch("/api/settings", { cache: "no-store" });
         const data = await res.json();
@@ -29,11 +29,11 @@ export default function useTabStyle() {
           setLoading(false);
           return;
         }
-      } catch (err) {
-        console.warn("Nu pot încărca tabStyle din server:", err);
+      } catch (e) {
+        console.warn("Nu pot încărca tabStyle din server:", e);
       }
 
-      // fallback → stilul local
+      // 🔁 fallback → localStorage
       const local = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (local && TAB_STYLES[local]) {
         setStyle(local);
@@ -42,10 +42,10 @@ export default function useTabStyle() {
       setLoading(false);
     }
 
-    loadServerStyle();
+    load();
   }, []);
 
-  // 🔵 2. Când utilizatorul schimbă stilul → salvează în DB + localStorage
+  // 🔵 2. Update in DB + localStorage
   const updateStyle = async (newStyle) => {
     if (!TAB_STYLES[newStyle]) return;
 
@@ -55,10 +55,13 @@ export default function useTabStyle() {
     try {
       await fetch("/api/settings", {
         method: "POST",
-        body: JSON.stringify({ tabStyle: newStyle }),
+        headers: { "Content-Type": "application/json" }, // 👈 OBLIGATORIU
+        body: JSON.stringify({
+          tabStyle: newStyle,
+        }),
       });
-    } catch (err) {
-      console.warn("Nu am putut salva tabStyle în server:", err);
+    } catch (e) {
+      console.warn("Nu pot salva tabStyle în server:", e);
     }
   };
 

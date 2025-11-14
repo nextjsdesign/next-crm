@@ -2,7 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import useTabStyle, { TAB_STYLES } from "@/hooks/useTabStyle";
+
+export const TAB_STYLES = {
+  classic: "Classic Clean",
+  glass: "Liquid Glass",
+  ios: "iOS Segmented",
+  ripple: "Ripple Effect",
+  color: "Color Slider",
+};
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -11,61 +18,66 @@ export default function SettingsPage() {
     phone: "",
     theme: "system",
     logoUrl: "",
+    tabStyle: "classic", // 👈 important
   });
 
   const [loading, setLoading] = useState(true);
 
-  // 🎨 Stil tab-uri
-  const { style, updateStyle } = useTabStyle();
-
+  // ===============================
+  // FETCH SETTINGS FROM DATABASE
+  // ===============================
   useEffect(() => {
     const fetchSettings = async () => {
       try {
         const res = await fetch("/api/settings");
         const data = await res.json();
+
         setSettings({
           companyName: data.companyName || "",
           email: data.email || "",
           phone: data.phone || "",
           theme: data.theme || "system",
           logoUrl: data.logoUrl || "",
+          tabStyle: data.tabStyle || "classic", // 👈 important
         });
-      } catch (e) {
-        console.error(e);
-        toast.error("Failed to load settings");
+      } catch (err) {
+        console.error(err);
+        toast.error("Could not load system settings.");
       } finally {
         setLoading(false);
       }
     };
+
     fetchSettings();
   }, []);
 
-  const handleChange = (e) => {
+  // ===============================
+  // FORM HANDLERS
+  // ===============================
+  const handleChange = (e) =>
     setSettings((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+
+  const handleSave = async () => {
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+
+      if (!res.ok) throw new Error("Save failed");
+
+      toast.success("Settings saved successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Could not save settings.");
+    }
   };
-
-const handleSave = async () => {
-  try {
-    const res = await fetch("/api/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...settings,
-        tabStyle: style, // 🔵 trebuie trimis explicit în DB
-      }),
-    });
-
-    if (res.ok) toast.success("✅ Settings saved successfully!");
-    else toast.error("❌ Failed to save settings");
-  } catch (e) {
-    console.error(e);
-    toast.error("❌ Error while saving");
-  }
-};
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
     const url = URL.createObjectURL(file);
     setSettings((prev) => ({ ...prev, logoUrl: url }));
   };
@@ -73,18 +85,21 @@ const handleSave = async () => {
   if (loading) {
     return (
       <div className="px-4 py-6 text-center text-gray-500 dark:text-gray-300">
-        Loading settings...
+        Loading settings…
       </div>
     );
   }
 
+  // ===============================
+  // RENDER PAGE
+  // ===============================
   return (
     <div className="w-full max-w-screen-lg mx-auto px-4 sm:px-5 lg:px-6 py-6 space-y-8">
 
-      {/* 🔵 TITLU PAGINĂ */}
+      {/* 🔵 Title */}
       <h1 className="text-2xl font-semibold mb-2">⚙️ CRM Settings</h1>
 
-      {/* ░░░░░░░░░░░░░░░░ SECTION 1 — COMPANY SETTINGS ░░░░░░░░░░░░░░░░ */}
+      {/* ==================== COMPANY INFO ==================== */}
       <section>
         <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">
           🏢 Company Information
@@ -140,7 +155,7 @@ const handleSave = async () => {
         </div>
       </section>
 
-      {/* ░░░░░░░░░░░░░░░░ SECTION 2 — BRANDING ░░░░░░░░░░░░░░░░ */}
+      {/* ==================== BRANDING ==================== */}
       <section>
         <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">
           🎨 Branding
@@ -170,7 +185,7 @@ const handleSave = async () => {
         </div>
       </section>
 
-      {/* ░░░░░░░░░░░░░░░░ SECTION 3 — TAB STYLE ░░░░░░░░░░░░░░░░ */}
+      {/* ==================== TAB STYLE ==================== */}
       <section>
         <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">
           🖥 Status Tabs Style
@@ -178,12 +193,14 @@ const handleSave = async () => {
 
         <div className="space-y-3">
           {Object.entries(TAB_STYLES).map(([key, label]) => {
-            const selected = style === key;
+            const selected = settings.tabStyle === key;
 
             return (
               <button
                 key={key}
-                onClick={() => updateStyle(key)}
+                onClick={() =>
+                  setSettings((prev) => ({ ...prev, tabStyle: key }))
+                }
                 className={`w-full flex items-center justify-between p-4 rounded-xl border shadow-sm transition-all backdrop-blur-md
                   ${
                     selected
@@ -209,7 +226,7 @@ const handleSave = async () => {
         </div>
       </section>
 
-      {/* ░░░░░░░░░░░░░░░░ SAVE BUTTON ░░░░░░░░░░░░░░░░ */}
+      {/* ==================== SAVE BUTTON ==================== */}
       <div className="mt-6 flex justify-center md:justify-end">
         <button onClick={handleSave} className="btn-blue w-full md:w-auto">
           Save Settings
