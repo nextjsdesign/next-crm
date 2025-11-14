@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import useTabStyle, { TAB_STYLES } from "@/hooks/useTabStyle";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -11,7 +12,11 @@ export default function SettingsPage() {
     theme: "system",
     logoUrl: "",
   });
+
   const [loading, setLoading] = useState(true);
+
+  // 🎨 Stil tab-uri
+  const { style, updateStyle } = useTabStyle();
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -46,6 +51,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
+
       if (res.ok) toast.success("✅ Settings saved successfully!");
       else toast.error("❌ Failed to save settings");
     } catch (e) {
@@ -70,16 +76,19 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="w-full max-w-screen-lg mx-auto px-4 sm:px-5 lg:px-6 py-6">
-      <h1 className="text-2xl font-semibold mb-6 text-center md:text-left">
-        ⚙️ CRM Settings
-      </h1>
+    <div className="w-full max-w-screen-lg mx-auto px-4 sm:px-5 lg:px-6 py-6 space-y-8">
 
-      {/* grid sigur pe mobile */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-        {/* Card stânga */}
-        <div className="card w-full min-w-0 p-4 sm:p-6 space-y-4">
-          <div className="min-w-0">
+      {/* 🔵 TITLU PAGINĂ */}
+      <h1 className="text-2xl font-semibold mb-2">⚙️ CRM Settings</h1>
+
+      {/* ░░░░░░░░░░░░░░░░ SECTION 1 — COMPANY SETTINGS ░░░░░░░░░░░░░░░░ */}
+      <section>
+        <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">
+          🏢 Company Information
+        </h2>
+
+        <div className="card p-4 sm:p-6 space-y-4">
+          <div>
             <label className="label">Company Name</label>
             <input
               name="companyName"
@@ -90,7 +99,7 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="min-w-0">
+          <div>
             <label className="label">Email</label>
             <input
               name="email"
@@ -101,7 +110,7 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="min-w-0">
+          <div>
             <label className="label">Phone</label>
             <input
               name="phone"
@@ -112,7 +121,7 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="min-w-0">
+          <div>
             <label className="label">Default Theme</label>
             <select
               name="theme"
@@ -126,13 +135,18 @@ export default function SettingsPage() {
             </select>
           </div>
         </div>
+      </section>
 
-        {/* Card dreapta */}
-        <div className="card w-full min-w-0 p-4 sm:p-6 flex flex-col items-center justify-center gap-4">
-          <label className="label text-center">Company Logo</label>
+      {/* ░░░░░░░░░░░░░░░░ SECTION 2 — BRANDING ░░░░░░░░░░░░░░░░ */}
+      <section>
+        <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">
+          🎨 Branding
+        </h2>
 
-          {/* container logo care NU depășește ecranul */}
-          <div className="w-full max-w-[9rem] sm:max-w-[10rem] aspect-square border rounded-xl flex items-center justify-center bg-gray-50 dark:bg-gray-800 overflow-hidden">
+        <div className="card p-4 sm:p-6 space-y-4 flex flex-col items-center">
+          <label className="label">Company Logo</label>
+
+          <div className="w-full max-w-[9rem] sm:max-w-[10rem] aspect-square border rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
             {settings.logoUrl ? (
               <img
                 src={settings.logoUrl}
@@ -151,9 +165,48 @@ export default function SettingsPage() {
             className="w-full text-sm"
           />
         </div>
-      </div>
+      </section>
 
-      {/* buton full pe mobile, auto pe desktop */}
+      {/* ░░░░░░░░░░░░░░░░ SECTION 3 — TAB STYLE ░░░░░░░░░░░░░░░░ */}
+      <section>
+        <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">
+          🖥 Status Tabs Style
+        </h2>
+
+        <div className="space-y-3">
+          {Object.entries(TAB_STYLES).map(([key, label]) => {
+            const selected = style === key;
+
+            return (
+              <button
+                key={key}
+                onClick={() => updateStyle(key)}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border shadow-sm transition-all backdrop-blur-md
+                  ${
+                    selected
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10 dark:border-blue-400"
+                      : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                  }
+                `}
+              >
+                <span className="text-gray-900 dark:text-gray-100 font-medium">
+                  {label}
+                </span>
+
+                <span
+                  className={`w-5 h-5 rounded-full border-2 transition ${
+                    selected
+                      ? "border-blue-600 bg-blue-600"
+                      : "border-gray-400 dark:border-gray-600"
+                  }`}
+                />
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ░░░░░░░░░░░░░░░░ SAVE BUTTON ░░░░░░░░░░░░░░░░ */}
       <div className="mt-6 flex justify-center md:justify-end">
         <button onClick={handleSave} className="btn-blue w-full md:w-auto">
           Save Settings

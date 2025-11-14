@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import useTabStyle from "@/hooks/useTabStyle";
 import {
   Search,
   SlidersHorizontal,
@@ -11,6 +12,7 @@ import {
   Eye,
   Pencil,
   Trash2,
+  Plus
 } from "lucide-react";
 
 const STATUS_TABS = [
@@ -44,6 +46,7 @@ export default function DevicesPage() {
   const router = useRouter();
 
   const [devices, setDevices] = useState([]);
+  const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [statusFilter, setStatusFilter] = useState("all");
@@ -64,9 +67,13 @@ const activeFilterCount = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
 
+
   const filterRef = useRef(null);
   const columnsRef = useRef(null);
 
+  // 🎨 Stil Status Tabs (din Settings)
+  const { style } = useTabStyle();
+  
   // 🔐 Protecție acces
   useEffect(() => {
     if (status === "loading") return;
@@ -171,6 +178,29 @@ const activeFilterCount = () => {
         return "bg-gray-100 text-gray-700 dark:bg-gray-600/30 dark:text-gray-300";
     }
   };
+
+const statusSoftBg = (status) => {
+  switch (status) {
+    case "Primire":
+      return "bg-sky-100/60 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300";
+    case "Diagnosticare":
+      return "bg-indigo-100/60 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300";
+    case "Nspf":
+      return "bg-orange-100/60 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300";
+    case "Așteaptă piese":
+      return "bg-amber-100/60 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300";
+    case "În lucru":
+      return "bg-blue-100/60 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300";
+    case "Finalizat":
+      return "bg-emerald-100/60 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300";
+    case "Predat":
+      return "bg-slate-100/60 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300";
+    case "Refuzat":
+      return "bg-rose-100/60 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300";
+    default:
+      return "bg-gray-100/60 text-gray-700 dark:bg-gray-600/20 dark:text-gray-300";
+  }
+};
 
   // 🧮 Filtrare fișe
   const filteredDevices = devices.filter((d) => {
@@ -300,187 +330,324 @@ const activeFilterCount = () => {
           </p>
         </div>
       </div>
+      
+{/* Status Tabs – dynamic style */}
+<div className="w-full">
+  {style === "classic" && (
+    <div className="rounded-xl bg-white dark:bg-gray-900 border p-2 flex gap-2 overflow-x-auto no-scrollbar">
+      {STATUS_TABS.map((t) => (
+        <button
+          key={t.value}
+          onClick={() => setStatusFilter(t.value)}
+          className={`
+            px-4 py-1.5 rounded-full text-sm whitespace-nowrap
+            ${
+              statusFilter === t.value
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+            }
+          `}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )}
 
-      {/* Status tabs – stil „segmented control / macOS” */}
-<div className="rounded-2xl bg-white/70 dark:bg-gray-900/70 border border-gray-200/70 dark:border-gray-700/70 shadow-sm backdrop-blur-sm w-full">
-  {/* Scroll + Snap */}
-  <div className="px-2 py-2 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory">
-    <div className="flex gap-2 min-w-max">
-      {STATUS_TABS.map((tab) => {
-        const isActive = statusFilter === tab.value;
-        return (
+  {style === "glass" && (
+    <div className="rounded-2xl bg-white/20 dark:bg-gray-800/20 backdrop-blur-xl border border-white/40 dark:border-gray-700/40 shadow-lg p-2 overflow-x-auto no-scrollbar">
+      <div className="flex gap-2 min-w-max">
+        {STATUS_TABS.map((t) => (
           <button
-            key={tab.value}
-            type="button"
-            onClick={() => setStatusFilter(tab.value)}
+            key={t.value}
+            onClick={() => setStatusFilter(t.value)}
             className={`
-              snap-start whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm border transition
+              px-4 py-1.5 rounded-full text-sm whitespace-nowrap backdrop-blur-sm
               ${
-                isActive
-                  ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 border-gray-900/80 dark:border-gray-100"
-                  : "bg-gray-100/70 text-gray-700 dark:bg-gray-800/70 dark:text-gray-300 border-transparent hover:bg-gray-200/80 dark:hover:bg-gray-700"
+                statusFilter === t.value
+                  ? "bg-white/70 dark:bg-gray-700/50 text-gray-900 dark:text-white shadow"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-white/30"
               }
             `}
           >
-            {tab.label}
+            {t.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )}
+
+  {style === "ios" && (
+    <div className="rounded-xl bg-gray-200 dark:bg-gray-700 p-1 flex gap-1 overflow-x-auto no-scrollbar">
+      {STATUS_TABS.map((t) => (
+        <button
+          key={t.value}
+          onClick={() => setStatusFilter(t.value)}
+          className={`
+            px-4 py-1 rounded-lg text-sm
+            ${
+              statusFilter === t.value
+                ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow"
+                : "text-gray-600 dark:text-gray-300"
+            }
+          `}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )}
+
+  {style === "ripple" && (
+    <div className="flex gap-2 overflow-x-auto no-scrollbar p-1">
+      {STATUS_TABS.map((t) => (
+        <button
+          key={t.value}
+          onClick={(e) => {
+            const el = e.currentTarget;
+            const circle = document.createElement("span");
+
+            const diameter = Math.max(el.clientWidth, el.clientHeight);
+            const radius = diameter / 2;
+
+            circle.style.width = circle.style.height = `${diameter}px`;
+            circle.style.left = `${e.clientX - el.offsetLeft - radius}px`;
+            circle.style.top = `${e.clientY - el.offsetTop - radius}px`;
+            circle.classList.add("ripple");
+
+            const ripple = el.getElementsByClassName("ripple")[0];
+            if (ripple) {
+              ripple.remove();
+            }
+
+            el.appendChild(circle);
+
+            setStatusFilter(t.value);
+          }}
+          className={`
+            relative overflow-hidden px-4 py-1.5 rounded-full text-sm
+            ${
+              statusFilter === t.value
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+            }
+          `}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )}
+
+{style === "color" && (
+  <div
+    className="
+      w-full rounded-2xl 
+      bg-white/20 dark:bg-gray-800/20 
+      backdrop-blur-xl
+      border border-white/40 dark:border-gray-700/40 
+      shadow-[0_4px_20px_rgba(0,0,0,0.06)]
+      px-3 py-3
+      overflow-x-auto no-scrollbar
+    "
+  >
+    <div className="flex gap-2 min-w-max">
+      {STATUS_TABS.map((t) => {
+        const isActive = statusFilter === t.value;
+
+        return (
+          <button
+            key={t.value}
+            onClick={() => setStatusFilter(t.value)}
+            className={`
+              px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap
+              transition-all duration-200 border border-transparent
+
+              ${
+                isActive
+                  ? statusSoftBg(t.value) + " shadow-sm scale-[1.03]"
+                  : "bg-white/40 dark:bg-gray-700/40 text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-700/60"
+              }
+            `}
+          >
+            {t.label}
           </button>
         );
       })}
     </div>
   </div>
+)}
 </div>
 
-      {/* Filter bar (search + icons) */}
-      <div className="relative rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-3 sm:p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {/* Search */}
-          <div className="flex-1 min-w-[180px]">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+{/* Filter bar (search + filters + create) */}
+<div className="relative rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-3 sm:p-4">
+
+  <div className="flex items-center gap-2 w-full">
+
+    {/* Search */}
+    <div className="flex-1">
+      <div className="relative w-full">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Caută după client, telefon, model, tehnician..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 text-sm outline-none"
+        />
+      </div>
+    </div>
+
+    {/* Filter */}
+    <div ref={filterRef} className="relative">
+      <button
+        type="button"
+        onClick={() => {
+          setShowFilters((prev) => !prev);
+          setShowColumns(false);
+        }}
+        className="relative inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60"
+      >
+        <SlidersHorizontal className="w-4 h-4 text-gray-700 dark:text-gray-200" />
+
+        {activeFilterCount() > 0 && (
+          <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+            {activeFilterCount()}
+          </span>
+        )}
+      </button>
+
+      {showFilters && (
+        <div className="absolute right-0 mt-2 w-60 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg p-3 text-xs z-20">
+          <p className="text-xs font-medium mb-2 text-gray-500 dark:text-gray-400">
+            Filtrare după dată
+          </p>
+
+          <div className="space-y-2">
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">De la</span>
               <input
-                type="text"
-                placeholder="Caută după client, telefon, model, tehnician..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500/70 outline-none"
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="text-xs px-2 py-1.5 rounded-lg border dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60"
               />
             </div>
-          </div>
 
-          {/* Icons: Filter & Columns */}
-          <div className="flex items-center justify-end gap-2 mt-1 sm:mt-0">
-            {/* Filter */}
-            <div ref={filterRef} className="relative">
-              <button
-  type="button"
-  onClick={() => {
-    setShowFilters((prev) => !prev);
-    setShowColumns(false);
-  }}
-  className="relative inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
->
-  <SlidersHorizontal className="w-4 h-4" />
-
-  {/* 🔵 Badge filtre active */}
-  {activeFilterCount() > 0 && (
-    <span
-      className="
-        absolute -top-1 -right-1
-        bg-blue-600 text-white text-[10px]
-        w-4 h-4 rounded-full
-        flex items-center justify-center
-        shadow-sm
-      "
-    >
-      {activeFilterCount()}
-    </span>
-  )}
-</button>
-
-              {showFilters && (
-                <div className="absolute right-0 mt-2 w-60 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg p-3 text-xs sm:text-sm z-20">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
-                    Filtrare după dată
-                  </p>
-                  <div className="space-y-2">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                        De la
-                      </span>
-                      <input
-                        type="date"
-                        value={dateFrom}
-                        onChange={(e) => setDateFrom(e.target.value)}
-                        className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 text-gray-800 dark:text-gray-100 focus:ring-1 focus:ring-blue-500/70 focus:border-blue-500/70 outline-none"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                        Până la
-                      </span>
-                      <input
-                        type="date"
-                        value={dateTo}
-                        onChange={(e) => setDateTo(e.target.value)}
-                        className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 text-gray-800 dark:text-gray-100 focus:ring-1 focus:ring-blue-500/70 focus:border-blue-500/70 outline-none"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDateFrom("");
-                        setDateTo("");
-                      }}
-                      className="mt-1 text-[11px] text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      Resetează datele
-                    </button>
-                  </div>
-                </div>
-              )}
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">Până la</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="text-xs px-2 py-1.5 rounded-lg border dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60"
+              />
             </div>
 
-            {/* Columns */}
-            <div ref={columnsRef} className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowColumns((prev) => !prev);
-                  setShowFilters(false);
-                }}
-                className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-              >
-                <Columns3 className="w-4 h-4" />
-              </button>
-
-              {showColumns && (
-                <div className="absolute right-0 mt-2 w-56 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg p-3 text-xs sm:text-sm z-20">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    Afișare coloane
-                  </p>
-                  {Object.entries(visibleColumns).map(([key, value]) => (
-                    <label
-                      key={key}
-                      className="flex items-center gap-2 text-gray-700 dark:text-gray-200 py-0.5"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={value}
-                        onChange={(e) =>
-                          setVisibleColumns((prev) => ({
-                            ...prev,
-                            [key]: e.target.checked,
-                          }))
-                        }
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span>
-                        {key === "client"
-                          ? "Client"
-                          : key === "phone"
-                          ? "Telefon"
-                          : key === "device"
-                          ? "Dispozitiv"
-                          : key === "model"
-                          ? "Model"
-                          : key === "status"
-                          ? "Status"
-                          : key === "technician"
-                          ? "Tehnician"
-                          : key === "price"
-                          ? "Preț"
-                          : key === "createdAt"
-                          ? "Data"
-                          : key}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setDateFrom("");
+                setDateTo("");
+              }}
+              className="mt-1 text-[11px] text-blue-600 dark:text-blue-400"
+            >
+              Resetează datele
+            </button>
           </div>
         </div>
-      </div>
+      )}
+    </div>
+
+    {/* Columns – DESKTOP */}
+    <div ref={columnsRef} className="relative hidden sm:block">
+      <button
+        type="button"
+        onClick={() => {
+          setShowColumns((prev) => !prev);
+          setShowFilters(false);
+        }}
+        className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60"
+      >
+        <Columns3 className="w-4 h-4 text-gray-700 dark:text-gray-200" />
+      </button>
+
+      {showColumns && (
+        <div className="absolute right-0 mt-2 w-56 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg p-3 text-xs z-20">
+          <p className="text-xs font-medium mb-1">Afișare coloane</p>
+
+          {Object.entries(visibleColumns).map(([key, value]) => (
+            <label key={key} className="flex items-center gap-2 py-0.5">
+              <input
+                type="checkbox"
+                checked={value}
+                onChange={(e) =>
+                  setVisibleColumns((prev) => ({
+                    ...prev,
+                    [key]: e.target.checked,
+                  }))
+                }
+                className="rounded border-gray-300 text-blue-600"
+              />
+              <span>
+                {key === "client"
+                  ? "Client"
+                  : key === "phone"
+                  ? "Telefon"
+                  : key === "device"
+                  ? "Dispozitiv"
+                  : key === "model"
+                  ? "Model"
+                  : key === "status"
+                  ? "Status"
+                  : key === "technician"
+                  ? "Tehnician"
+                  : key === "price"
+                  ? "Preț"
+                  : key === "createdAt"
+                  ? "Data"
+                  : key}
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+
+    {/* Create – DESKTOP */}
+    <button
+      onClick={() => router.push("/devices/create")}
+      className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg 
+                 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium 
+                 shadow-md transition active:scale-95"
+    >
+      <Plus size={16} />
+      Crează fișă
+    </button>
+
+    {/* Create – MOBILE toggle */}
+    <button
+      className="sm:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg bg-blue-600 text-white"
+      onClick={() => setShowCreate((p) => !p)}
+    >
+      <Plus size={16} />
+    </button>
+
+  </div>
+
+  {/* Expanded create – MOBILE */}
+  {showCreate && (
+    <div className="sm:hidden mt-3">
+      <button
+        onClick={() => router.push("/devices/create")}
+        className="w-full py-2 rounded-lg bg-blue-600 text-white text-sm"
+      >
+        Crează fișă
+      </button>
+    </div>
+  )}
+</div>
+ 
 
       {/* Dacă nu există rezultate */}
       {totalItems === 0 ? (
