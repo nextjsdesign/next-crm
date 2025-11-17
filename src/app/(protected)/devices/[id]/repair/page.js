@@ -70,14 +70,12 @@ export default function DeviceRepairPage() {
   const canEdit = isAdmin || isAssignedToMe;
   const isLocked = !canEdit;
 
-  // cine poate scrie note:
+  // 🔓 cine poate scrie note (chat activ tot timpul):
   // - admin
-  // - tehnicianul care are lucrarea
-  // - ORICE user dacă fișa nu e preluată de nimeni (isAssigned = false)
+  // - orice tehnician
+  // - recepție
   const canWriteNotes =
-  isAdmin ||
-  isTechnician ||
-  currentRole === "receptionist";
+    isAdmin || isTechnician || currentRole === "receptionist";
 
   // ===== FETCH DEVICE + ACTIVE REPAIR + TECHNICIANS =====
   useEffect(() => {
@@ -257,6 +255,37 @@ export default function DeviceRepairPage() {
     );
   };
 
+  // ===== helper: asigură că avem o fișă Repair în DB (creată automat) =====
+  const ensureRepairExists = async () => {
+    if (existingRepair?.id) return existingRepair;
+
+    if (!deviceId) {
+      throw new Error("Lipsește ID-ul fișei de service.");
+    }
+
+    const res = await fetch("/api/repairs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        deviceId,
+        status: "În lucru",
+        diagnostic: "",
+        notes: "",
+        items: [],
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(
+        data.error || "Nu am putut inițializa fișa de reparație."
+      );
+    }
+
+    setExistingRepair(data.repair || null);
+    return data.repair;
+  };
+
   // ===== PREIA LUCRAREA =====
   const handleClaim = async () => {
     if (!deviceId || !currentUserId) {
@@ -362,10 +391,6 @@ export default function DeviceRepairPage() {
 
   // ===== ADĂUGARE NOTĂ ÎN ISTORIC =====
   const handleAddNote = async () => {
-    if (!existingRepair?.id) {
-      toast.error("Trebuie salvată fișa de reparație înainte să adaugi note.");
-      return;
-    }
     if (!currentUserId) {
       toast.error("Nu ești autentificat.");
       return;
@@ -381,11 +406,19 @@ export default function DeviceRepairPage() {
 
     try {
       setAddingNote(true);
+
+      // 💡 dacă nu există încă fișă Repair, o creăm automat aici
+      let repairId = existingRepair?.id;
+      if (!repairId) {
+        const created = await ensureRepairExists();
+        repairId = created.id;
+      }
+
       const res = await fetch("/api/repair-notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          repairId: existingRepair.id,
+          repairId,
           userId: currentUserId,
           message: newNote.trim(),
         }),
@@ -396,6 +429,15 @@ export default function DeviceRepairPage() {
 
       setRepairNotes((prev) => [...prev, data.note]);
       setNewNote("");
+
+      // ne asigurăm că avem repair în state cu id
+      if (!existingRepair?.id && data.note?.repairId) {
+        setExistingRepair((prev) => ({
+          ...(prev || {}),
+          id: data.note.repairId,
+        }));
+      }
+
       toast.success("Notă adăugată în istoric.");
     } catch (err) {
       console.error(err);
@@ -578,7 +620,7 @@ export default function DeviceRepairPage() {
         <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-800 text-xs px-3 py-2">
           Fișa este blocată pentru tine. Doar tehnicianul care a preluat lucrarea sau
           un administrator poate modifica această fișă. Poți totuși adăuga note în
-          istoricul lucrării (dacă fișa nu este asignată altcuiva).
+          istoricul lucrării (chat intern) indiferent dacă este asignată sau nu.
         </div>
       )}
 
@@ -810,7 +852,7 @@ export default function DeviceRepairPage() {
             <div className="flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
                 <ClipboardList className="w-4 h-4 text-blue-500" />
-                Istoric note lucrare
+                Istoric note lucrare (chat intern)
               </h2>
             </div>
 
@@ -822,9 +864,9 @@ export default function DeviceRepairPage() {
                 </div>
               ) : repairNotes.length === 0 ? (
                 <p className="text-xs text-gray-500">
-                  Nu există încă note în istoric. Orice coleg poate adăuga o notă
-                  (ex: client sunat, client anunțat, piesă comandată etc.),
-                  în funcție de drepturile pe fișă.
+                  Nu există încă note în istoric. Orice coleg (admin, tehnician,
+                  recepție) poate adăuga o notă în orice moment – chiar dacă fișa nu
+                  este încă asignată.
                 </p>
               ) : (
                 repairNotes.map((note) => (
@@ -856,18 +898,14 @@ export default function DeviceRepairPage() {
               <textarea
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
-                placeholder={
-                  existingRepair
-                    ? "Adaugă o notă (ex: clientul a fost sunat, clientul a confirmat, vine mâine după laptop...)"
-                    : "Salvează întâi fișa de reparație pentru a adăuga note."
-                }
+                placeholder="Adaugă o notă (ex: client sunat, a confirmat devizul, vine mâine după laptop...)"
                 className="input min-h-[70px] text-xs"
-                disabled={!existingRepair || !canWriteNotes || addingNote}
+                disabled={!canWriteNotes || addingNote}
               />
               <button
                 type="button"
                 onClick={handleAddNote}
-                disabled={addingNote || !existingRepair || !canWriteNotes}
+                disabled={addingNote || !canWriteNotes}
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-medium hover:bg-slate-800 disabled:opacity-50"
               >
                 {addingNote && <Loader2 className="w-3 h-3 animate-spin" />}

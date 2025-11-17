@@ -1,25 +1,17 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
 
-// Helper pentru notificări
-async function sendNotification(userId, message, deviceId, repairId) {
-  if (!userId) return;
-  return prisma.notification.create({
-    data: {
-      userId,
-      type: "note-added",
-      message,
-      deviceId,
-      repairId,
-    },
-  });
-}
-
+/** ------------------------------------------------------------------
+ *  GET  - Returnează toate notele pentru un repairId
+ * ------------------------------------------------------------------*/
 export async function GET(req) {
   try {
-    const repairId = req.nextUrl.searchParams.get("repairId");
+    const { searchParams } = new URL(req.url);
+    const repairId = searchParams.get("repairId");
 
-    if (!repairId) return NextResponse.json({ notes: [] });
+    if (!repairId) {
+      return NextResponse.json({ notes: [] });
+    }
 
     const notes = await prisma.repairNote.findMany({
       where: { repairId },
@@ -28,151 +20,82 @@ export async function GET(req) {
     });
 
     return NextResponse.json({ notes });
-  } catch (e) {
-    console.error("GET /api/repair-notes ERROR:", e);
-    return NextResponse.json({ notes: [] });
+  } catch (err) {
+    console.error("GET /repair-notes error:", err);
+    return NextResponse.json(
+      { error: "Eroare la încărcarea notelor." },
+      { status: 500 }
+    );
   }
 }
 
+/** ------------------------------------------------------------------
+ *  POST - Adaugă o notă
+ *  Dacă repairId NU există → creează automat un repair minim
+ * ------------------------------------------------------------------*/
 export async function POST(req) {
   try {
-    const { repairId, userId, message } = await req.json();
+    const body = await req.json();
+    let { repairId, deviceId, userId, message } = body;
 
-    if (!repairId || !userId || !message)
-      return NextResponse.json({ error: "Date lipsă" }, { status: 400 });
-
-    // =======================================================
-    // FETCH Repair + Device
-    // =======================================================
-    const repair = await prisma.repair.findUnique({
-      where: { id: repairId },
-      include: { device: true },
-    });
-
-    if (!repair)
+    if (!userId) {
       return NextResponse.json(
-        { error: "Fișa de reparație nu există" },
-        { status: 404 }
-      );
-
-    const author = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!author)
-      return NextResponse.json(
-        { error: "User inexistent" },
+        { error: "Userul nu este valid." },
         { status: 400 }
       );
-
-    const deviceId = repair.deviceId;
-
-    // =======================================================
-    // 1) SINCRONIZARE dacă device.userId ≠ repair.assignedTechnicianId
-    // =======================================================
-    if (!repair.assignedTechnicianId && repair.device?.userId) {
-      await prisma.repair.update({
-        where: { id: repairId },
-        data: { assignedTechnicianId: repair.device.userId },
-      });
-
-      repair.assignedTechnicianId = repair.device.userId;
     }
 
-    // =======================================================
-    // 2) Creăm nota
-    // =======================================================
+    if (!message?.trim()) {
+      return NextResponse.json(
+        { error: "Mesajul notei nu poate fi gol." },
+        { status: 400 }
+      );
+    }
+
+    // Dacă nu avem repairId → îi facem unul
+    let repair = null;
+
+    if (!repairId) {
+      if (!deviceId) {
+        return NextResponse.json(
+          { error: "Lipsește deviceId pentru a crea automat fișa." },
+          { status: 400 }
+        );
+      }
+
+      // Căutăm un repair deja existent pentru device
+      repair = await prisma.repair.findFirst({
+        where: { deviceId },
+      });
+
+      // Dacă nu există → îl creăm automat
+      if (!repair) {
+        repair = await prisma.repair.create({
+          data: {
+            deviceId,
+            status: "În lucru",
+          },
+        });
+      }
+
+      repairId = repair.id;
+    }
+
+    // Creăm nota
     const note = await prisma.repairNote.create({
       data: {
         repairId,
         userId,
-        message,
+        message: message.trim(),
       },
       include: { user: true },
     });
 
-    // =======================================================
-    // 3) LOGICA FINALĂ DE NOTIFICĂRI (FĂRĂ DUBLURI)
-    // =======================================================
-
-    // Adunăm adminii o singură dată
-    const admins = await prisma.user.findMany({
-      where: { role: "admin" },
-    });
-
-    if (repair.assignedTechnicianId) {
-      //
-      // 🔵 CAZ 1: EXISTĂ tehnician ASIGNAT
-      //
-
-      // 1️⃣ Notificăm tehnicianul asignat (dacă NU el a scris)
-      if (repair.assignedTechnicianId !== userId) {
-        await sendNotification(
-          repair.assignedTechnicianId,
-          `${author.name} a scris o notă în fișa #${deviceId}`,
-          deviceId,
-          repairId
-        );
-      }
-
-      // 2️⃣ Notificăm ADMINII (fără autor și fără assignedTechnician ≠ autor)
-      for (const admin of admins) {
-        if (
-          admin.id !== userId &&                 // nu notificăm autorul
-          admin.id !== repair.assignedTechnicianId // ✨ STOP dublură: dacă adminul este assignedTech, NU notificăm iar
-        ) {
-          await sendNotification(
-            admin.id,
-            `${author.name} a scris o notă în fișa #${deviceId}`,
-            deviceId,
-            repairId
-          );
-        }
-      }
-
-    } else {
-      //
-      // 🔵 CAZ 2: NU există tehnician asignat
-      //
-
-      // notificăm toți tehnicienii (cu excepția autorului)
-      const techs = await prisma.user.findMany({
-        where: { role: "technician" },
-      });
-
-      for (const t of techs) {
-        if (t.id !== userId) {
-          await sendNotification(
-            t.id,
-            `${author.name} a scris o notă în fișa #${deviceId}`,
-            deviceId,
-            repairId
-          );
-        }
-      }
-
-      // notificăm adminii (cu excepția autorului)
-      for (const admin of admins) {
-        if (admin.id !== userId) {
-          await sendNotification(
-            admin.id,
-            `${author.name} a scris o notă în fișa #${deviceId}`,
-            deviceId,
-            repairId
-          );
-        }
-      }
-    }
-
-    // =======================================================
-    // Returnăm nota
-    // =======================================================
     return NextResponse.json({ note });
-
-  } catch (e) {
-    console.error("POST /api/repair-notes ERROR:", e);
+  } catch (err) {
+    console.error("POST /repair-notes error:", err);
     return NextResponse.json(
-      { error: "Eroare server" },
+      { error: "Eroare la adăugarea notei." },
       { status: 500 }
     );
   }
