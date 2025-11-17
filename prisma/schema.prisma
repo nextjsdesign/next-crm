@@ -7,41 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//
-// ==========================
-//        ENUMS
-// ==========================
-//
-
-enum Role {
-  admin
-  technician
-  receptionist
-}
-
-//
-// ==========================
-//        MODELS
-// ==========================
-//
-
 model User {
-  id        String    @id @default(uuid())
-  name      String
-  email     String    @unique
-  password  String
-  role      Role      @default(technician)
-  workHours String?
-  target    Int?
-  bonus     Int?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime? @updatedAt
-  isActive  Boolean   @default(true)
-
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          Role           @default(technician)
+  workHours     String?
+  target        Int?
+  bonus         Int?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime?      @updatedAt
+  isActive      Boolean        @default(true)
   devices       Device[]
-  repairs       Repair[]       @relation("RepairAssignedTech") // Asigned repairs
-  notes         RepairNote[]
   notifications Notification[]
+  repairs       Repair[]       @relation("RepairAssignedTech")
+  notes         RepairNote[]
 }
 
 model Client {
@@ -51,117 +32,87 @@ model Client {
   email     String?
   address   String?
   createdAt DateTime @default(now())
-
-  devices Device[]
+  devices   Device[]
 }
 
 model Device {
-  id String @id @default(uuid())
-
-  clientId String
-  client   Client @relation(fields: [clientId], references: [id])
-
-  userId String?
-  user   User?   @relation(fields: [userId], references: [id])
-
-  parentDeviceId String?
-
-  sheetType String?
-  status    String  @default("Primire")
-
-  deviceType   String?
-  brand        String?
-  model        String?
-  serialNumber String?
-
-  problem     String?
-  description String?
-  accessories String?
-  technician  String?
-
-  priceEstimate  Float?
-  advance        Float?
-  warranty       String?
-  priceConfirmed Boolean @default(false)
-
-  liquidContact Boolean   @default(false)
-  notes         String?
-  deliveryDays  Int?
-  deliveryDate  DateTime?
-
+  id                 String    @id @default(uuid())
+  clientId           String
+  userId             String?
+  parentDeviceId     String?
+  sheetType          String?
+  status             String    @default("Primire")
+  deviceType         String?
+  brand              String?
+  model              String?
+  serialNumber       String?
+  problem            String?
+  description        String?
+  accessories        String?
+  technician         String?
+  priceEstimate      Float?
+  advance            Float?
+  warranty           String?
+  priceConfirmed     Boolean   @default(false)
+  liquidContact      Boolean   @default(false)
+  notes              String?
+  deliveryDays       Int?
+  deliveryDate       DateTime?
   receptionCondition String?
   receptionNotes     String?
-
-  createdAt DateTime @default(now())
-
-  repairs Repair[]
+  createdAt          DateTime  @default(now())
+  client             Client    @relation(fields: [clientId], references: [id])
+  user               User?     @relation(fields: [userId], references: [id])
+  repairs            Repair[]
 }
 
 model Repair {
-  id String @id @default(uuid())
-
-  deviceId String
-  device   Device @relation(fields: [deviceId], references: [id])
-
+  id                   String       @id @default(uuid())
+  deviceId             String
   assignedTechnicianId String?
-  assignedTechnician   User? @relation("RepairAssignedTech", fields: [assignedTechnicianId], references: [id])
-
-  takenAt    DateTime?
-  status     String    @default("În lucru")
-  diagnostic String?
-  notes      String?
-
-  items        RepairItem[]
-  historyNotes RepairNote[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime? @updatedAt
+  takenAt              DateTime?
+  status               String       @default("În lucru")
+  diagnostic           String?
+  notes                String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime?    @updatedAt
+  assignedTechnician   User?        @relation("RepairAssignedTech", fields: [assignedTechnicianId], references: [id])
+  device               Device       @relation(fields: [deviceId], references: [id])
+  items                RepairItem[]
+  historyNotes         RepairNote[]
 }
 
 model RepairItem {
-  id String @id @default(uuid())
-
-  repairId String
-  repair   Repair @relation(fields: [repairId], references: [id])
-
+  id        String @id @default(uuid())
+  repairId  String
   kind      String
   label     String
   qty       Int    @default(1)
   unitPrice Float  @default(0)
+  repair    Repair @relation(fields: [repairId], references: [id])
 }
 
 model RepairNote {
-  id       String   @id @default(uuid())
-  repairId String
-  repair   Repair   @relation(fields: [repairId], references: [id])
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
+  id        String   @id @default(uuid())
+  repairId  String
+  userId    String
   message   String
   createdAt DateTime @default(now())
+  repair    Repair   @relation(fields: [repairId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Notification {
-  id String @id @default(uuid())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  type     String
-  message  String
-  deviceId String?
-  repairId String?
-
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  message   String
+  deviceId  String?
+  repairId  String?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }
-
-//
-// ==========================
-//      SETTINGS !!!
-// ==========================
-//
 
 model Settings {
   id          String   @id @default(uuid())
@@ -172,4 +123,10 @@ model Settings {
   logoUrl     String?
   tabStyle    String   @default("classic")
   updatedAt   DateTime @updatedAt
+}
+
+enum Role {
+  admin
+  technician
+  receptionist
 }
