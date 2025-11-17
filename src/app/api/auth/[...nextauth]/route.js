@@ -8,7 +8,7 @@ export const authOptions = {
     CredentialsProvider({
       name: "Credentials",
       async authorize(credentials) {
-        console.log("🟡 Autentificare pentru:", credentials.email);
+        console.log("🟡 Login attempt:", credentials.email);
 
         if (!credentials?.email || !credentials?.password) {
           throw new Error("DATE_INCOMPLETE");
@@ -19,45 +19,64 @@ export const authOptions = {
         });
 
         if (!user) {
-          console.log("❌ Utilizator inexistent");
+          console.log("❌ User not found");
           throw new Error("USER_INEXISTENT");
         }
 
-        // 🚫 Cont dezactivat → blocăm logarea
         if (!user.isActive) {
-        console.log("⛔ Cont dezactivat!");
-        throw new Error("ACCOUNT_DISABLED");
+          console.log("⛔ Account disabled");
+          throw new Error("ACCOUNT_DISABLED");
         }
-        
+
         const isValid = await bcrypt.compare(credentials.password, user.password);
 
         if (!isValid) {
-          console.log("❌ Parolă incorectă");
+          console.log("❌ Wrong password");
           throw new Error("PAROLA_INCORECTA");
         }
 
-        // 🔒 RESTRICȚIE ORE — DOAR TEHNICIENI
+        // ⭐ RESTRICȚIE ORE PENTRU TEHNICIENI — versiunea corectă
         if (user.role === "technician" && user.workHours) {
-          const [start, end] = user.workHours.split("-");
+          try {
+            const raw = user.workHours.replace(/\s+/g, ""); // eliminăm spațiile
+            const [start, end] = raw.split("-");
 
-          const now = new Date();
-          const current = `${now.getHours().toString().padStart(2, "0")}:${now
-            .getMinutes()
-            .toString()
-            .padStart(2, "0")}`;
+            const toMinutes = (time) => {
+              const parts = time.split(":");
+              const h = parseInt(parts[0], 10);
+              const m = parts[1] ? parseInt(parts[1], 10) : 0;
+              return h * 60 + m;
+            };
 
-          console.log("⏰ Ora curentă:", current, "Program setat:", start, "-", end);
+            // validăm formatul minimal
+            if (!start || !end) {
+              console.log("⚠️ Program invalid: lipsesc valorile");
+            } else {
+              const startMin = toMinutes(start);
+              const endMin = toMinutes(end);
 
-          // verificare interval
-          if (current < start || current > end) {
-            console.log("⛔ ACCES BLOCAT în afara intervalului");
+              if (isNaN(startMin) || isNaN(endMin)) {
+                console.log("⚠️ Program invalid în DB:", user.workHours);
+              } else {
+                const now = new Date();
+                const currentMin = now.getHours() * 60 + now.getMinutes();
 
-            // ✨ AICI TRIMIT MESAJUL SPECIAL
-            throw new Error(`ACCES_BLOCATI_${start}_${end}`);
+                console.log(
+                  `⏰ Current: ${currentMin} min | Allowed: ${startMin} - ${endMin} min`
+                );
+
+                if (currentMin < startMin || currentMin > endMin) {
+                  console.log("⛔ ACCESS BLOCKED OUTSIDE PROGRAM");
+                  throw new Error(`ACCES_BLOCAT_INTERVAL_${start}_${end}`);
+                }
+              }
+            }
+          } catch (err) {
+            console.log("⚠️ Eroare procesare workHours:", err);
           }
         }
 
-        console.log("✅ Login reușit pentru:", user.email);
+        console.log("✅ Login OK for:", user.email);
 
         return {
           id: user.id,
@@ -69,13 +88,16 @@ export const authOptions = {
     }),
   ],
 
-  pages: { signIn: "/login" },
+  pages: {
+    signIn: "/login",
+  },
 
   session: {
     strategy: "jwt",
   },
 
   callbacks: {
+    // JWT
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
@@ -84,10 +106,19 @@ export const authOptions = {
       return token;
     },
 
+    // Session
     async session({ session, token }) {
-      session.user.id = token.id;
-      session.user.role = token.role;
+      if (token) {
+        session.user.id = token.id;
+        session.user.role = token.role;
+      }
       return session;
+    },
+
+    // 🚀 Redirect stabil
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      return `${baseUrl}/dashboard`;
     },
   },
 

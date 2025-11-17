@@ -1,31 +1,21 @@
 import "./globals.css";
-import { Inter } from "next/font/google";
-import Providers from "./providers";
 import ThemeProvider from "./theme-provider";
-import { Toaster } from "sonner";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-});
+import SessionWrapper from "./providers/SessionWrapper";
 
 export const metadata = {
-  title: "CRM Next",
-  description: "Dashboard CRM",
+  title: "CRM Next Mario",
+  description: "CRM Service ProComputer",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${inter.className} bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen transition-colors duration-300`}
-      >
-        <ThemeProvider>
-          <Providers>
+      <body>
+        <SessionWrapper>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem={true}>
             {children}
-            <Toaster richColors position="top-right" />
-          </Providers>
-        </ThemeProvider>
+          </ThemeProvider>
+        </SessionWrapper>
       </body>
     </html>
   );

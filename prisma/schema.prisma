@@ -9,7 +9,7 @@ datasource db {
 
 //
 // ==========================
-//        ENUMURI
+//        ENUMS
 // ==========================
 //
 
@@ -21,25 +21,27 @@ enum Role {
 
 //
 // ==========================
-//        MODELE
+//        MODELS
 // ==========================
 //
 
 model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
   name      String
-  email     String   @unique
+  email     String    @unique
   password  String
-  role      Role     @default(technician) // 🎯 enum validat
-  workHours String? // ex: "09:00-17:00"
-  target    Int? // target lunar (lei)
-  bonus     Int? // bonus curent
-  createdAt DateTime @default(now())
+  role      Role      @default(technician)
+  workHours String?
+  target    Int?
+  bonus     Int?
+  createdAt DateTime  @default(now())
   updatedAt DateTime? @updatedAt
-  isActive Boolean @default(true)
+  isActive  Boolean   @default(true)
 
-  // 🔗 Relație: un user poate avea mai multe fișe
-  devices Device[]
+  devices       Device[]
+  repairs       Repair[]       @relation("RepairAssignedTech")
+  notes         RepairNote[]
+  notifications Notification[] // Notificările userului
 }
 
 model Client {
@@ -50,7 +52,6 @@ model Client {
   address   String?
   createdAt DateTime @default(now())
 
-  // 🔗 un client poate avea mai multe dispozitive
   devices Device[]
 }
 
@@ -61,53 +62,132 @@ model Settings {
   phone       String
   theme       String   @default("system")
   logoUrl     String?
-  tabStyle    String   @default("classic")  // 👈 nou
+  tabStyle    String   @default("classic")
   updatedAt   DateTime @updatedAt
 }
 
 model Device {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  // 🔗 Relații
   clientId String @db.ObjectId
   client   Client @relation(fields: [clientId], references: [id])
 
   userId String? @db.ObjectId
   user   User?   @relation(fields: [userId], references: [id])
 
-  parentDeviceId String? @db.ObjectId // legătură cu fișa anterioară
+  parentDeviceId String?
 
-  // 🧾 Tip fișă & status
-  sheetType String? // "Nouă" / "Garanție"
+  sheetType String?
   status    String  @default("Primire")
 
-  // 🧩 Detalii generale
   deviceType   String?
   brand        String?
   model        String?
   serialNumber String?
 
-  // ⚙️ Probleme & descrieri
   problem     String?
   description String?
   accessories String?
   technician  String?
 
-  // 💰 Prețuri & garanții
   priceEstimate  Float?
   advance        Float?
-  warranty       String? // "30 zile", "90 zile"
+  warranty       String?
   priceConfirmed Boolean @default(false)
 
-  // 🧾 Informații suplimentare
   liquidContact Boolean   @default(false)
   notes         String?
   deliveryDays  Int?
   deliveryDate  DateTime?
 
-  // 🧾 Recepție / stare estetică
   receptionCondition String?
   receptionNotes     String?
 
   createdAt DateTime @default(now())
+
+  repairs Repair[]
+}
+
+//
+// ==========================
+//          REPAIR
+// ==========================
+//
+
+model Repair {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  deviceId String @db.ObjectId
+  device   Device @relation(fields: [deviceId], references: [id])
+
+  assignedTechnicianId String? @db.ObjectId
+  assignedTechnician   User?   @relation("RepairAssignedTech", fields: [assignedTechnicianId], references: [id])
+
+  takenAt    DateTime?
+  status     String    @default("În lucru")
+  diagnostic String?
+  notes      String?
+
+  items        RepairItem[]
+  historyNotes RepairNote[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
+
+model RepairItem {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  repairId String @db.ObjectId
+  repair   Repair @relation(fields: [repairId], references: [id])
+
+  kind      String
+  label     String
+  qty       Int    @default(1)
+  unitPrice Float  @default(0)
+}
+
+//
+// ==========================
+//       REPAIR NOTES
+// ==========================
+//
+
+model RepairNote {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  repairId String @db.ObjectId
+  repair   Repair @relation(fields: [repairId], references: [id])
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  message   String
+  createdAt DateTime @default(now())
+}
+
+//
+// ==========================
+//       NOTIFICATIONS
+// ==========================
+//
+
+model Notification {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  type    String // "note-added" | "status-change" | "assign"
+  message String
+
+  deviceId String? // STRING — pentru a evita erorile ObjectId
+  repairId String? // STRING — la fel
+
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([repairId])
+  @@index([deviceId])
 }

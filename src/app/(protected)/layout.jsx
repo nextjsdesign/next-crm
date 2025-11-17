@@ -1,11 +1,22 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
-import { useState, useRef, useEffect } from "react";
-import { Menu, X, Moon, Sun } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import {
+  Moon,
+  Sun,
+  LayoutDashboard,
+  Users,
+  FileText,
+  User,
+  X,
+  Menu,
+  Bell,
+} from "lucide-react";
 import { useTheme } from "next-themes";
+import { createPortal } from "react-dom";
 
 export default function ProtectedLayout({ children }) {
   const pathname = usePathname();
@@ -13,170 +24,325 @@ export default function ProtectedLayout({ children }) {
   const { data: session, status } = useSession();
   const { theme, setTheme } = useTheme();
 
-  // 🔹 HOOKS – toate sus, în ordine fixă
+  // 📱 MOBILE drawer
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // 🖥️ DESKTOP mode (Pinned = default)
+  const [sidebarPinned, setSidebarPinned] = useState(true);
+
+  // 🤏 DESKTOP hover expand
+  const [hovered, setHovered] = useState(false);
+
+  // 👤 Dropdown avatar
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const avatarRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  // 🔹 1. Marcare montare
-  useEffect(() => setMounted(true), []);
+  // 🔔 NOTIFICATIONS
+  const [notifications, setNotifications] = useState([]);
+  const [unread, setUnread] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
 
-  // 🔹 2. Redirect logic – NO RETURN EARLY!!!
+  // Redirect if not logged in
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
+    if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  // 🔹 3. Click outside dropdown
+  // Close avatar dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+    if (!dropdownOpen) return;
+
+    const handler = (e) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target) &&
+        !avatarRef.current.contains(e.target)
+      ) {
         setDropdownOpen(false);
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [dropdownOpen]);
 
-  // 🔹 Evităm return înainte ca hook-urile să ruleze
-  const isLoading = status === "loading";
-  const isLoggedOut = status === "unauthenticated";
+  // 🔔 Load notifications
+  useEffect(() => {
+    if (!session?.user?.id) return;
 
-  // 🔹 Meniu pe roluri
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/notifications?userId=${session.user.id}`);
+        const data = await res.json();
+        const notifs = data.notifications || [];
+
+        setNotifications(notifs);
+        setUnread(notifs.filter((n) => !n.read).length);
+      } catch (e) {
+        console.error("Eroare la notificări:", e);
+      }
+    };
+
+    load();
+    const interval = setInterval(load, 5000);
+    return () => clearInterval(interval);
+  }, [session?.user?.id]);
+
+  if (!session) return null;
+
+  // =========================
+  //        SIDEBAR ITEMS
+  // =========================
   const navItems = [
-    { href: "/", label: "Dashboard", roles: ["admin", "technician", "receptionist"] },
-    { href: "/clients", label: "Clients", roles: ["admin", "receptionist"] },
-    { href: "/devices", label: "Devices", roles: ["admin", "technician", "receptionist"] },
-    { href: "/users", label: "Users", roles: ["admin"] },
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "technician", "receptionist"] },
+    { href: "/clients",   label: "Clients",   icon: Users,            roles: ["admin", "receptionist"] },
+    { href: "/devices",   label: "Devices",   icon: FileText,         roles: ["admin", "technician", "receptionist"] },
+    { href: "/users",     label: "Users",     icon: User,             roles: ["admin"] },
   ];
 
-  // 🟡 Afișare loading
-  if (isLoading) {
+  const SidebarLink = ({ item, expanded }) => {
+    const Icon = item.icon;
+    const active = pathname.startsWith(item.href);
+
     return (
-      <div className="flex items-center justify-center h-screen text-gray-600 dark:text-gray-300">
-        Se verifică sesiunea...
-      </div>
-    );
-  }
-
-  // 🟡 Dacă userul nu e logat, nu afișăm layout-ul
-  if (isLoggedOut) return null;
-
-  // 🟢 DACA E LOGAT, ARĂTĂ TOT UI-UL
-  return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 overflow-x-hidden">
-      
-      {/* Overlay mobil */}
-      <div
-        className={`fixed inset-0 z-40 bg-black/40 lg:hidden transition-opacity ${
-          sidebarOpen ? "opacity-100 visible" : "opacity-0 invisible"
-        }`}
+      <Link
+        href={item.href}
         onClick={() => setSidebarOpen(false)}
-      ></div>
-
-      {/* Sidebar */}
-      <aside
-        className={`fixed z-50 lg:static transform transition-transform backdrop-blur-xl bg-white/70 dark:bg-gray-800/60 shadow-md w-64 flex flex-col ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
+        className={`
+          flex items-center transition-all rounded-lg
+          ${expanded ? "px-4 py-2 gap-3" : "justify-center p-3"}
+          ${active ? "bg-blue-600 text-white" : "hover:bg-gray-100 dark:hover:bg-gray-700"}
+        `}
       >
-        <div className="p-4 text-2xl font-bold text-center border-b dark:border-gray-700">
-          CRM Next
+        <Icon size={20} />
+        {expanded && <span>{item.label}</span>}
+      </Link>
+    );
+  };
+
+  // Detect desktop safely for SSR
+  const isDesktop =
+    typeof window !== "undefined" ? window.innerWidth >= 1024 : false;
+
+  // Sidebar expanded logic
+  const expanded = isDesktop ? sidebarPinned || hovered : true;
+
+  return (
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
+
+      {/* ===================== SIDEBAR ===================== */}
+      <aside
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className={`
+          fixed lg:static top-0 left-0 z-50
+          h-screen lg:h-auto
+          border-r dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg
+          transition-all duration-300 flex flex-col
+
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+
+          ${expanded ? "lg:w-64" : "lg:w-20"}
+
+          w-64
+        `}
+      >
+        {/* LOGO */}
+        <div className="flex items-center gap-2 px-4 py-4 border-b dark:border-gray-700">
+          <img
+            src="/logo.png"
+            className={`${expanded ? "w-10 h-10" : "w-8 h-8 mx-auto"} transition-all`}
+          />
+          {expanded && (
+            <span className="font-bold text-lg text-gray-900 dark:text-white">
+              ProComputer
+            </span>
+          )}
         </div>
 
-        <nav className="flex-1 p-4 space-y-2">
+        {/* MENU */}
+        <nav className="p-3 space-y-1">
           {navItems
-            .filter((item) => item.roles.includes(session?.user?.role))
+            .filter((i) => i.roles.includes(session.user.role))
             .map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={`block px-3 py-2 rounded-lg transition ${
-                  pathname === item.href
-                    ? "bg-blue-600 text-white"
-                    : "hover:bg-blue-100 dark:hover:bg-gray-700 dark:text-gray-200"
-                }`}
-              >
-                {item.label}
-              </Link>
+              <SidebarLink key={item.href} item={item} expanded={expanded} />
             ))}
         </nav>
       </aside>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col">
-        {/* Navbar */}
-        <header className="flex items-center justify-between bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl shadow px-4 py-3 relative">
+      {/* ===================== PAGE AREA ===================== */}
+      <div className="flex-1 flex flex-col overflow-x-hidden">
+
+        {/* ===================== NAVBAR ===================== */}
+        <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 shadow-md sticky top-0 z-20">
+
+          {/* DESKTOP toggler */}
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 lg:hidden"
+            className="hidden lg:flex p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
+            onClick={() => setSidebarPinned((prev) => !prev)}
           >
-            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            {sidebarPinned ? (
+              <div className="flex flex-col gap-[3px]">
+                <span className="w-5 h-[3px] bg-gray-700 dark:bg-gray-300 rounded"></span>
+                <span className="w-5 h-[3px] bg-gray-700 dark:bg-gray-300 rounded"></span>
+                <span className="w-5 h-[3px] bg-gray-700 dark:bg-gray-300 rounded"></span>
+              </div>
+            ) : (
+              <X size={20} />
+            )}
+          </button>
+
+          {/* MOBILE */}
+          <button
+            className="lg:hidden p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
           <h1 className="font-semibold dark:text-gray-100">CRM Next</h1>
 
-          <div className="flex items-center space-x-3 relative" ref={dropdownRef}>
+          <div className="flex items-center gap-3">
+
+{/* 🔔 NOTIFICATION BELL */}
+<div className="relative">
+  <button
+    onClick={() => setNotifOpen(!notifOpen)}
+    className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+  >
+    <Bell className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+    {unread > 0 && (
+      <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] px-1.5 py-[2px] rounded-full">
+        {unread}
+      </span>
+    )}
+  </button>
+
+  {notifOpen && (
+    <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-gray-900 border dark:border-gray-700 shadow-xl rounded-xl p-2 z-50">
+
+      {notifications.length === 0 && (
+        <p className="text-xs p-3 text-gray-500 text-center">
+          Nu ai notificări.
+        </p>
+      )}
+
+      {notifications.map((n) => (
+        <div
+          key={n.id}
+          className={`relative p-3 rounded-lg text-xs mb-1 transition cursor-pointer ${
+            n.read
+              ? "bg-gray-100 dark:bg-gray-800"
+              : "bg-blue-50 dark:bg-blue-900"
+          }`}
+        >
+          {/* DELETE BTN */}
+          <button
+            className="absolute top-2 right-2 text-gray-500 hover:text-red-600"
+            onClick={async (e) => {
+              e.stopPropagation();
+              await fetch("/api/notifications", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: n.id }),
+              });
+
+              // scoatem instant din UI
+              setNotifications((prev) =>
+                prev.filter((x) => x.id !== n.id)
+              );
+              setUnread((prev) =>
+                prev - (n.read ? 0 : 1)
+              );
+            }}
+          >
+            <X size={12} />
+          </button>
+
+          {/* CLICK = mark as read + navigate */}
+          <div
+            onClick={async () => {
+              if (!n.read) {
+                await fetch("/api/notifications", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ id: n.id }),
+                });
+
+                // update instant UI
+                setNotifications((prev) =>
+                  prev.map((x) =>
+                    x.id === n.id ? { ...x, read: true } : x
+                  )
+                );
+                setUnread((prev) => prev - 1);
+              }
+
+              setNotifOpen(false);
+
+              if (n.deviceId) {
+                router.push(`/devices/${n.deviceId}/repair`);
+              }
+            }}
+          >
+            <p className="font-medium">{n.message}</p>
+            <p className="text-[10px] text-gray-500">
+              {new Date(n.createdAt).toLocaleString("ro-RO")}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
+            {/* THEME SWITCH */}
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
             >
-              {mounted && (theme === "dark" ? <Sun size={20} /> : <Moon size={20} />)}
+              {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
             </button>
 
-            {/* Avatar */}
-            <div className="relative">
-              <img
-                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  session.user.name || "User"
-                )}&background=0D8ABC&color=fff`}
-                alt="profile"
-                className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-600 cursor-pointer hover:ring-2 hover:ring-blue-400 transition"
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-              />
-
-              {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 animate-fadeIn">
-                  <Link
-                    href="/profile"
-                    className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() => setDropdownOpen(false)}
-                  >
-                    🧍‍♂️ Profile
-                  </Link>
-
-                  {session?.user?.role === "admin" && (
-                    <Link
-                      href="/settings"
-                      className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      onClick={() => setDropdownOpen(false)}
-                    >
-                      ⚙️ Settings
-                    </Link>
-                  )}
-
-                  <div className="border-t dark:border-gray-700"></div>
-
-                  <button
-                    onClick={() => {
-                      setDropdownOpen(false);
-                      signOut({ callbackUrl: "/login" });
-                    }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500"
-                  >
-                    🚪 Logout
-                  </button>
-                </div>
-              )}
-            </div>
+            {/* AVATAR */}
+            <img
+              ref={avatarRef}
+              src={`https://ui-avatars.com/api/?name=${session.user.name}&background=0D8ABC&color=fff`}
+              className="w-8 h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+            />
           </div>
         </header>
 
-        <main className="flex-1 p-6">{children}</main>
+        {/* ===================== DROPDOWN ===================== */}
+        {dropdownOpen &&
+          createPortal(
+            <div
+              ref={dropdownRef}
+              className="fixed top-16 right-4 z-[9999] w-44 bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-xl rounded-lg p-2"
+            >
+              <Link href="/profile" className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+                Profil
+              </Link>
+
+              {session.user.role === "admin" && (
+                <Link href="/settings" className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  Setări
+                </Link>
+              )}
+
+              <button
+                className="w-full text-left px-3 py-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+              >
+                Delogare
+              </button>
+            </div>,
+            document.body
+          )}
+
+        {/* ===================== PAGE CONTENT ===================== */}
+        <main className="flex-1 p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );

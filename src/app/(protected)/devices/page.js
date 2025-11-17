@@ -12,7 +12,8 @@ import {
   Eye,
   Pencil,
   Trash2,
-  Plus
+  Plus,
+  Wrench
 } from "lucide-react";
 
 const STATUS_TABS = [
@@ -842,6 +843,19 @@ const statusSoftBg = (status) => {
                               }
                             }}
                           />
+                          {/* 🔧 FIȘĂ DE REPARAȚIE */}
+    <ActionIconButton
+      icon={Wrench}
+      title="Fișă reparație"
+      onClick={() => {
+        if (d.id) {
+          router.push(`/devices/${d.id}/repair`);
+        } else {
+          toast.info("Fișa nu are id disponibil.");
+        }
+      }}
+    />
+
                           <ActionIconButton
                             icon={Trash2}
                             title="Șterge"

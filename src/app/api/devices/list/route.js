@@ -2,6 +2,26 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 /**
+ * 🔹 GET — Returnează toate fișele de service
+ */
+export async function GET() {
+  try {
+    const devices = await prisma.device.findMany({
+      include: {
+        client: true,
+        user: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json(devices);
+  } catch (error) {
+    console.error("❌ Eroare GET /devices:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+/**
  * 🔹 POST — Creează o fișă nouă
  */
 export async function POST(request) {
@@ -27,6 +47,8 @@ export async function POST(request) {
       });
     }
 
+    // ⬆️ copiat din list/route.js (corect)
+
     let parentDevice = null;
     if (data.selectedDeviceId) {
       parentDevice = await prisma.device.findUnique({
@@ -34,6 +56,7 @@ export async function POST(request) {
       });
     }
 
+    // Creăm fișa nouă
     const device = await prisma.device.create({
       data: {
         clientId: client.id,
@@ -78,7 +101,6 @@ export async function POST(request) {
 export async function PUT(request) {
   try {
     const data = await request.json();
-
     const { id, clientName, phone, email, ...updateData } = data;
 
     if (!id) {
