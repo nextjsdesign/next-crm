@@ -52,7 +52,7 @@ export async function GET(req) {
 
 /*
 |--------------------------------------------------------------------------
-| POST — Creează o fișă (de obicei nu e nevoie, dar o păstrăm)
+| POST — Creează o fișă nouă + setează status și pe Device
 |--------------------------------------------------------------------------
 */
 export async function POST(req) {
@@ -63,24 +63,40 @@ export async function POST(req) {
       return NextResponse.json({ error: "deviceId lipsă" }, { status: 400 });
     }
 
-    const repair = await prisma.repair.create({
+    const effectiveStatus = status || "În lucru";
+
+    // 1️⃣ Creăm fișa de reparație
+    const created = await prisma.repair.create({
       data: {
         deviceId,
-        status: status || "În lucru",
+        status: effectiveStatus,
         diagnostic: diagnostic || "",
         notes: notes || "",
         items: {
-          create: items?.map((i) => ({
-            kind: i.kind,
-            label: i.label,
-            qty: i.qty || 1,
-            unitPrice: i.unitPrice || 0,
-          })) || [],
+          create:
+            items?.map((i) => ({
+              kind: i.kind,
+              label: i.label,
+              qty: i.qty || 1,
+              unitPrice: i.unitPrice || 0,
+            })) || [],
         },
       },
+    });
+
+    // 2️⃣ Actualizăm și Device.status ca să se vadă în Dashboard
+    await prisma.device.update({
+      where: { id: deviceId },
+      data: { status: effectiveStatus },
+    });
+
+    // 3️⃣ Reîncărcăm cu relații
+    const repair = await prisma.repair.findUnique({
+      where: { id: created.id },
       include: {
         items: true,
-        historyNotes: true,
+        historyNotes: { include: { user: true } },
+        assignedTechnician: true,
       },
     });
 
@@ -93,13 +109,12 @@ export async function POST(req) {
 
 /*
 |--------------------------------------------------------------------------
-| PUT — Actualizează fișa + items
+| PUT — Actualizează fișa + items + sincronizează status-ul pe Device
 |--------------------------------------------------------------------------
 */
 export async function PUT(req) {
   try {
-    const { id, deviceId, status, diagnostic, notes, items } =
-      await req.json();
+    const { id, status, diagnostic, notes, items } = await req.json();
 
     if (!id) {
       return NextResponse.json(
@@ -115,23 +130,33 @@ export async function PUT(req) {
     const updated = await prisma.repair.update({
       where: { id },
       data: {
-        status,
-        diagnostic,
-        notes,
+        status: status || "În lucru",
+        diagnostic: diagnostic || "",
+        notes: notes || "",
         items: {
-          create: items?.map((i) => ({
-            kind: i.kind,
-            label: i.label,
-            qty: i.qty || 1,
-            unitPrice: i.unitPrice || 0,
-          })) || [],
+          create:
+            items?.map((i) => ({
+              kind: i.kind,
+              label: i.label,
+              qty: i.qty || 1,
+              unitPrice: i.unitPrice || 0,
+            })) || [],
         },
       },
       include: {
         items: true,
-        historyNotes: true,
+        historyNotes: { include: { user: true } },
+        assignedTechnician: true,
       },
     });
+
+    // 3️⃣ Sincronizăm și Device.status ca să apară corect în listă / tab-uri
+    if (updated.deviceId && status) {
+      await prisma.device.update({
+        where: { id: updated.deviceId },
+        data: { status },
+      });
+    }
 
     return NextResponse.json({ repair: updated });
   } catch (e) {

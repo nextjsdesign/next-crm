@@ -68,7 +68,7 @@ export async function POST(req) {
     const deviceId = repair.deviceId;
 
     // =======================================================
-    // 1) SINCRONIZARE assignedTechnicianId cu device.userId
+    // 1) SINCRONIZARE dacă device.userId ≠ repair.assignedTechnicianId
     // =======================================================
     if (!repair.assignedTechnicianId && repair.device?.userId) {
       await prisma.repair.update({
@@ -92,45 +92,50 @@ export async function POST(req) {
     });
 
     // =======================================================
-    // 3) LOGICA COMPLETĂ A NOTIFICĂRILOR
+    // 3) LOGICA FINALĂ DE NOTIFICĂRI (FĂRĂ DUBLURI)
     // =======================================================
 
-    // Dacă există tehnician asignat:
-    if (repair.assignedTechnicianId) {
-      const assignedId = repair.assignedTechnicianId;
+    // Adunăm adminii o singură dată
+    const admins = await prisma.user.findMany({
+      where: { role: "admin" },
+    });
 
-      // Notificăm tehnicianul ASIGNAT dacă NU el scrie nota
-      if (assignedId !== userId) {
+    if (repair.assignedTechnicianId) {
+      //
+      // 🔵 CAZ 1: EXISTĂ tehnician ASIGNAT
+      //
+
+      // 1️⃣ Notificăm tehnicianul asignat (dacă NU el a scris)
+      if (repair.assignedTechnicianId !== userId) {
         await sendNotification(
-          assignedId,
+          repair.assignedTechnicianId,
           `${author.name} a scris o notă în fișa #${deviceId}`,
           deviceId,
           repairId
         );
       }
 
-      // Notificăm adminii doar dacă autorul NU este admin
-      if (author.role !== "admin") {
-        const admins = await prisma.user.findMany({
-          where: { role: "admin" },
-        });
-
-        for (const admin of admins) {
-          if (admin.id !== userId) {
-            await sendNotification(
-              admin.id,
-              `${author.name} a scris o notă în fișa #${deviceId}`,
-              deviceId,
-              repairId
-            );
-          }
+      // 2️⃣ Notificăm ADMINII (fără autor și fără assignedTechnician ≠ autor)
+      for (const admin of admins) {
+        if (
+          admin.id !== userId &&                 // nu notificăm autorul
+          admin.id !== repair.assignedTechnicianId // ✨ STOP dublură: dacă adminul este assignedTech, NU notificăm iar
+        ) {
+          await sendNotification(
+            admin.id,
+            `${author.name} a scris o notă în fișa #${deviceId}`,
+            deviceId,
+            repairId
+          );
         }
       }
-    }
 
-    // Dacă NU există tehnician asignat:
-    else {
-      // toți tehnicienii (mai puțin autorul)
+    } else {
+      //
+      // 🔵 CAZ 2: NU există tehnician asignat
+      //
+
+      // notificăm toți tehnicienii (cu excepția autorului)
       const techs = await prisma.user.findMany({
         where: { role: "technician" },
       });
@@ -146,11 +151,7 @@ export async function POST(req) {
         }
       }
 
-      // toți adminii (mai puțin autorul)
-      const admins = await prisma.user.findMany({
-        where: { role: "admin" },
-      });
-
+      // notificăm adminii (cu excepția autorului)
       for (const admin of admins) {
         if (admin.id !== userId) {
           await sendNotification(
@@ -164,9 +165,10 @@ export async function POST(req) {
     }
 
     // =======================================================
-    // Returnăm nota ca JSON valid
+    // Returnăm nota
     // =======================================================
     return NextResponse.json({ note });
+
   } catch (e) {
     console.error("POST /api/repair-notes ERROR:", e);
     return NextResponse.json(

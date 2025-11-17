@@ -13,7 +13,16 @@ export async function POST(request) {
       );
     }
 
-    const device = await prisma.device.findUnique({ where: { id: deviceId } });
+    // verificăm device-ul
+    const device = await prisma.device.findUnique({
+      where: { id: deviceId },
+      include: {
+        repairs: {
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+
     if (!device) {
       return NextResponse.json(
         { error: "Fișa de service nu există." },
@@ -21,22 +30,48 @@ export async function POST(request) {
       );
     }
 
-    // Dacă e deja preluată de altcineva, doar adminul ar trebui să poată reseta,
-    // dar logica de rol o controlăm în componentă (canEdit / handleClaim)
-    const updated = await prisma.device.update({
+    // luăm fișa activă (ultima creată)
+    let activeRepair = device.repairs[0];
+
+    // dacă NU există repair → îl creăm acum
+    if (!activeRepair) {
+      activeRepair = await prisma.repair.create({
+        data: {
+          deviceId,
+          assignedTechnicianId: userId,  // 🔥 SETĂM AICI TEHNICIANUL
+          takenAt: new Date(),
+        },
+      });
+    } else {
+      // dacă există → actualizăm tehnicianul
+      activeRepair = await prisma.repair.update({
+        where: { id: activeRepair.id },
+        data: {
+          assignedTechnicianId: userId,   // 🔥 AICI ESTE CHEIA PROBLEMEI
+          takenAt: new Date(),
+        },
+      });
+    }
+
+    // actualizăm și device-ul (nu elimin, poate îți folosește la alte părți)
+    const updatedDevice = await prisma.device.update({
       where: { id: deviceId },
       data: {
-        userId,
+        userId: userId,
         technician: userName || "Tehnician",
       },
       include: {
         client: true,
         user: true,
-        repairs: { include: { items: true } },
       },
     });
 
-    return NextResponse.json({ device: updated });
+    return NextResponse.json({
+      device: updatedDevice,
+      activeRepair,
+      assignedUserId: activeRepair.assignedTechnicianId,
+      assignedUserName: userName,
+    });
   } catch (error) {
     console.error("❌ EROARE POST /api/devices/claim:", error);
     return NextResponse.json(

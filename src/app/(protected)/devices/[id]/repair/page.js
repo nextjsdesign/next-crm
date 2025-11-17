@@ -35,6 +35,10 @@ export default function DeviceRepairPage() {
   const [device, setDevice] = useState(null);
   const [existingRepair, setExistingRepair] = useState(null);
 
+  // tehnician asignat (din API nou)
+  const [assignedUserId, setAssignedUserId] = useState(null);
+  const [assignedUserName, setAssignedUserName] = useState(null);
+
   // 🔧 form state
   const [status, setStatus] = useState("În lucru");
   const [diagnostic, setDiagnostic] = useState("");
@@ -55,8 +59,6 @@ export default function DeviceRepairPage() {
   const [addingNote, setAddingNote] = useState(false);
 
   // 🔐 drepturi de editare pentru FIȘĂ (nu pentru note)
-  const assignedUserId = device?.userId || device?.user?.id || null;
-  const assignedUserName = device?.user?.name || device?.technician || null;
   const isAssigned = !!assignedUserId;
   const isAssignedToMe =
     assignedUserId && currentUserId && assignedUserId === currentUserId;
@@ -72,9 +74,12 @@ export default function DeviceRepairPage() {
   // - admin
   // - tehnicianul care are lucrarea
   // - ORICE user dacă fișa nu e preluată de nimeni (isAssigned = false)
-  const canWriteNotes = isAdmin || isAssignedToMe || !isAssigned;
+  const canWriteNotes =
+  isAdmin ||
+  isTechnician ||
+  currentRole === "receptionist";
 
-  // ===== FETCH DEVICE + REPAIR + TECHNICIANS =====
+  // ===== FETCH DEVICE + ACTIVE REPAIR + TECHNICIANS =====
   useEffect(() => {
     if (!deviceId) return;
 
@@ -82,70 +87,72 @@ export default function DeviceRepairPage() {
       try {
         setLoading(true);
 
-        // 🔹 1) Device info
-        try {
-          const resDevice = await fetch(
-            `/api/devices/repair-init?deviceId=${deviceId}`,
-            { cache: "no-store" }
-          );
-          if (resDevice.ok) {
-            const dev = await resDevice.json();
-            setDevice(dev);
+        // 🔹 1) Device + activeRepair + assigned user (API nou)
+        const resDevice = await fetch(
+          `/api/devices/repair-init?deviceId=${deviceId}`,
+          { cache: "no-store" }
+        );
+        const data = await resDevice.json();
 
-            // dacă fișa are deja userId, îl putem propune ca selectat în dropdown
-            if (dev?.userId) {
-              setSelectedTechnicianId(dev.userId);
-            }
-          } else {
-            setDevice(null);
-          }
-        } catch {
-          setDevice(null);
+        if (!resDevice.ok) {
+          throw new Error(data.error || "Eroare la încărcare fișă reparație.");
         }
 
-        // 🔹 2) Repair info
-        try {
-          const resRepair = await fetch(`/api/repairs?deviceId=${deviceId}`);
-          if (resRepair.ok) {
-            const data = await resRepair.json();
-            if (data && data.repair) {
-              const r = data.repair;
-              setExistingRepair(r);
+        const dev = data.device || null;
+        const activeRepair = data.activeRepair || null;
 
-              setStatus(r.status || "În lucru");
-              setDiagnostic(r.diagnostic || "");
-              setTechNotes(r.notes || "");
+        setDevice(dev);
+        setExistingRepair(activeRepair);
 
-              if (Array.isArray(r.items) && r.items.length > 0) {
-                const partsItems = r.items.filter((it) => it.kind === "part");
-                const laborItems = r.items.filter((it) => it.kind === "labor");
+        // tehnician asignat din API
+        setAssignedUserId(data.assignedUserId || null);
+        setAssignedUserName(data.assignedUserName || null);
 
-                setParts(
-                  partsItems.length > 0
-                    ? partsItems.map((it) => ({
-                        label: it.label || "",
-                        qty: it.qty || 1,
-                        price: it.unitPrice?.toString() || "",
-                      }))
-                    : [{ label: "", qty: 1, price: "" }]
-                );
-
-                setLabor(
-                  laborItems.length > 0
-                    ? laborItems.map((it) => ({
-                        label: it.label || "",
-                        price: it.unitPrice?.toString() || "",
-                      }))
-                    : [{ label: "", price: "" }]
-                );
-              }
-            }
-          }
-        } catch {
-          // nu există încă fișă de reparație
+        if (data.assignedUserId) {
+          setSelectedTechnicianId(data.assignedUserId);
         }
 
-        // 🔹 3) Lista tehnicieni
+        // dacă există fișă activă, populăm formularul
+        if (activeRepair) {
+          const r = activeRepair;
+
+          setStatus(r.status || "În lucru");
+          setDiagnostic(r.diagnostic || "");
+          setTechNotes(r.notes || "");
+
+          if (Array.isArray(r.items) && r.items.length > 0) {
+            const partsItems = r.items.filter((it) => it.kind === "part");
+            const laborItems = r.items.filter((it) => it.kind === "labor");
+
+            setParts(
+              partsItems.length > 0
+                ? partsItems.map((it) => ({
+                    label: it.label || "",
+                    qty: it.qty || 1,
+                    price: it.unitPrice?.toString() || "",
+                  }))
+                : [{ label: "", qty: 1, price: "" }]
+            );
+
+            setLabor(
+              laborItems.length > 0
+                ? laborItems.map((it) => ({
+                    label: it.label || "",
+                    price: it.unitPrice?.toString() || "",
+                  }))
+                : [{ label: "", price: "" }]
+            );
+          }
+        } else {
+          // dacă nu avem fișă încă, resetăm la valorile default
+          setStatus("În lucru");
+          setDiagnostic("");
+          setTechNotes("");
+          setParts([{ label: "", qty: 1, price: "" }]);
+          setLabor([{ label: "", price: "" }]);
+        }
+
+        // 🔹 2) Lista tehnicieni
         try {
           const resUsers = await fetch("/api/users");
           if (resUsers.ok) {
@@ -160,7 +167,9 @@ export default function DeviceRepairPage() {
         }
       } catch (err) {
         console.error(err);
-        toast.error("Eroare la încărcare fișă reparație.");
+        toast.error(err.message || "Eroare la încărcare fișă reparație.");
+        setDevice(null);
+        setExistingRepair(null);
       } finally {
         setLoading(false);
       }
@@ -271,18 +280,26 @@ export default function DeviceRepairPage() {
       if (!res.ok)
         throw new Error(data.error || "Nu am putut prelua lucrarea.");
 
-      setDevice(data.device);
+      // dacă backend-ul trimite device + repair, le actualizăm
+      if (data.device) {
+        setDevice(data.device);
+      }
       if (data.repair) {
         setExistingRepair((prev) => ({
           ...(prev || {}),
           ...data.repair,
         }));
       }
+
+      // setăm în mod clar cine a preluat lucrarea
+      setAssignedUserId(currentUserId);
+      setAssignedUserName(currentUser.name);
       setSelectedTechnicianId(currentUserId);
+
       toast.success("Ai preluat lucrarea.");
     } catch (err) {
       console.error(err);
-      toast.error(err.message);
+      toast.error(err.message || "Eroare la preluarea lucrării.");
     } finally {
       setClaiming(false);
     }
@@ -321,7 +338,9 @@ export default function DeviceRepairPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Eroare la reasignare.");
 
-      setDevice(data.device);
+      if (data.device) {
+        setDevice(data.device);
+      }
       if (data.repair) {
         setExistingRepair((prev) => ({
           ...(prev || {}),
@@ -329,10 +348,13 @@ export default function DeviceRepairPage() {
         }));
       }
 
+      setAssignedUserId(tech.id);
+      setAssignedUserName(tech.name);
+
       toast.success("Lucrarea a fost reasignată.");
     } catch (err) {
       console.error(err);
-      toast.error(err.message);
+      toast.error(err.message || "Eroare la reasignarea lucrării.");
     } finally {
       setAssigning(false);
     }
@@ -377,7 +399,7 @@ export default function DeviceRepairPage() {
       toast.success("Notă adăugată în istoric.");
     } catch (err) {
       console.error(err);
-      toast.error(err.message);
+      toast.error(err.message || "Eroare la adăugarea notei.");
     } finally {
       setAddingNote(false);
     }
@@ -434,9 +456,34 @@ export default function DeviceRepairPage() {
 
       toast.success("Fișa de reparație a fost salvată.");
       setExistingRepair(data.repair || null);
+
+      // 🔄 actualizăm status-ul vizual
+      if (data.repair?.status) {
+        setStatus(data.repair.status);
+      }
+
+      // 🔄 reîncărcăm device-ul + assignedUser după salvare
+      try {
+        const resDevice = await fetch(
+          `/api/devices/repair-init?deviceId=${deviceId}`,
+          { cache: "no-store" }
+        );
+        if (resDevice.ok) {
+          const d = await resDevice.json();
+          setDevice(d.device || null);
+          setExistingRepair(d.activeRepair || null);
+          setAssignedUserId(d.assignedUserId || null);
+          setAssignedUserName(d.assignedUserName || null);
+          if (d.assignedUserId) {
+            setSelectedTechnicianId(d.assignedUserId);
+          }
+        }
+      } catch (err2) {
+        console.error("Eroare reload device după salvare:", err2);
+      }
     } catch (err) {
       console.error(err);
-      toast.error(err.message);
+      toast.error(err.message || "Eroare la salvare reparație.");
     } finally {
       setSaving(false);
     }
@@ -820,9 +867,7 @@ export default function DeviceRepairPage() {
               <button
                 type="button"
                 onClick={handleAddNote}
-                disabled={
-                  addingNote || !existingRepair || !canWriteNotes
-                }
+                disabled={addingNote || !existingRepair || !canWriteNotes}
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-medium hover:bg-slate-800 disabled:opacity-50"
               >
                 {addingNote && <Loader2 className="w-3 h-3 animate-spin" />}

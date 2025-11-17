@@ -1,22 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// VALIDATOR ObjectId (Mongo)
-function isValidObjectId(id) {
-  return /^[0-9a-fA-F]{24}$/.test(id);
-}
-
 //
 // ============================
-//          GET NOTIFICATIONS
+//      GET NOTIFICATIONS
 // ============================
 //
 export async function GET(req) {
   try {
     const userId = req.nextUrl.searchParams.get("userId");
 
-    // ID lipsă sau invalid → returnăm 0 notificări
-    if (!userId || !isValidObjectId(userId)) {
+    // Dacă nu e UUID → ignorăm verificarea (Postgres UUID poate avea multe formate)
+    if (!userId) {
       return NextResponse.json({ notifications: [] });
     }
 
@@ -28,7 +23,7 @@ export async function GET(req) {
 
     return NextResponse.json({ notifications });
   } catch (e) {
-    console.error("Eroare în GET /api/notifications:", e);
+    console.error("❌ Eroare GET /api/notifications:", e);
     return NextResponse.json({ notifications: [] }, { status: 200 });
   }
 }
@@ -42,8 +37,8 @@ export async function PATCH(req) {
   try {
     const { id } = await req.json();
 
-    if (!id || !isValidObjectId(id)) {
-      return NextResponse.json({ ok: true });
+    if (!id) {
+      return NextResponse.json({ ok: false });
     }
 
     await prisma.notification.update({
@@ -53,22 +48,22 @@ export async function PATCH(req) {
 
     return NextResponse.json({ ok: true });
   } catch (e) {
-    console.error("Eroare în PATCH /api/notifications:", e);
+    console.error("❌ Eroare PATCH /api/notifications:", e);
     return NextResponse.json({ ok: false });
   }
 }
 
 //
 // ============================
-//        DELETE NOTIFICATION
+//      DELETE NOTIFICATION
 // ============================
 //
 export async function DELETE(req) {
   try {
     const { id } = await req.json();
 
-    if (!id || !isValidObjectId(id)) {
-      return NextResponse.json({ ok: true });
+    if (!id) {
+      return NextResponse.json({ ok: false });
     }
 
     await prisma.notification.delete({
@@ -77,7 +72,7 @@ export async function DELETE(req) {
 
     return NextResponse.json({ ok: true });
   } catch (e) {
-    console.error("Eroare în DELETE /api/notifications:", e);
+    console.error("❌ Eroare DELETE /api/notifications:", e);
     return NextResponse.json({ ok: false });
   }
 }

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
+import { Toaster } from "react-hot-toast";
 
 export default function ProtectedLayout({ children }) {
   const pathname = usePathname();
@@ -27,18 +28,18 @@ export default function ProtectedLayout({ children }) {
   // 📱 MOBILE drawer
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // 🖥️ DESKTOP mode (Pinned = default)
+  // 🖥️ DESKTOP pinned sidebar
   const [sidebarPinned, setSidebarPinned] = useState(true);
 
-  // 🤏 DESKTOP hover expand
+  // 🤏 hover expand
   const [hovered, setHovered] = useState(false);
 
-  // 👤 Dropdown avatar
+  // 👤 avatar dropdown
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const avatarRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  // 🔔 NOTIFICATIONS
+  // 🔔 notifications
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -48,7 +49,7 @@ export default function ProtectedLayout({ children }) {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  // Close avatar dropdown when clicking outside
+  // Close avatar dropdown
   useEffect(() => {
     if (!dropdownOpen) return;
 
@@ -84,20 +85,40 @@ export default function ProtectedLayout({ children }) {
     };
 
     load();
-    const interval = setInterval(load, 5000);
+    const interval = setInterval(load, 4000);
     return () => clearInterval(interval);
   }, [session?.user?.id]);
 
   if (!session) return null;
 
   // =========================
-  //        SIDEBAR ITEMS
+  //      SIDEBAR ITEMS
   // =========================
   const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "technician", "receptionist"] },
-    { href: "/clients",   label: "Clients",   icon: Users,            roles: ["admin", "receptionist"] },
-    { href: "/devices",   label: "Devices",   icon: FileText,         roles: ["admin", "technician", "receptionist"] },
-    { href: "/users",     label: "Users",     icon: User,             roles: ["admin"] },
+    {
+      href: "/dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      roles: ["admin", "technician", "receptionist"],
+    },
+    {
+      href: "/clients",
+      label: "Clients",
+      icon: Users,
+      roles: ["admin", "receptionist"],
+    },
+    {
+      href: "/devices",
+      label: "Devices",
+      icon: FileText,
+      roles: ["admin", "technician", "receptionist"],
+    },
+    {
+      href: "/users",
+      label: "Users",
+      icon: User,
+      roles: ["admin"],
+    },
   ];
 
   const SidebarLink = ({ item, expanded }) => {
@@ -120,16 +141,13 @@ export default function ProtectedLayout({ children }) {
     );
   };
 
-  // Detect desktop safely for SSR
   const isDesktop =
     typeof window !== "undefined" ? window.innerWidth >= 1024 : false;
 
-  // Sidebar expanded logic
   const expanded = isDesktop ? sidebarPinned || hovered : true;
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
-
       {/* ===================== SIDEBAR ===================== */}
       <aside
         onMouseEnter={() => setHovered(true)}
@@ -141,7 +159,6 @@ export default function ProtectedLayout({ children }) {
           transition-all duration-300 flex flex-col
 
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-
           ${expanded ? "lg:w-64" : "lg:w-20"}
 
           w-64
@@ -172,10 +189,8 @@ export default function ProtectedLayout({ children }) {
 
       {/* ===================== PAGE AREA ===================== */}
       <div className="flex-1 flex flex-col overflow-x-hidden">
-
         {/* ===================== NAVBAR ===================== */}
         <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 shadow-md sticky top-0 z-20">
-
           {/* DESKTOP toggler */}
           <button
             className="hidden lg:flex p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -203,98 +218,94 @@ export default function ProtectedLayout({ children }) {
           <h1 className="font-semibold dark:text-gray-100">CRM Next</h1>
 
           <div className="flex items-center gap-3">
+            {/* 🔔 NOTIFICATION BELL */}
+            <div className="relative">
+              <button
+                onClick={() => setNotifOpen(!notifOpen)}
+                className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+              >
+                <Bell className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                {unread > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] px-1.5 py-[2px] rounded-full">
+                    {unread}
+                  </span>
+                )}
+              </button>
 
-{/* 🔔 NOTIFICATION BELL */}
-<div className="relative">
-  <button
-    onClick={() => setNotifOpen(!notifOpen)}
-    className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-  >
-    <Bell className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-    {unread > 0 && (
-      <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] px-1.5 py-[2px] rounded-full">
-        {unread}
-      </span>
-    )}
-  </button>
+              {notifOpen && (
+                <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-gray-900 border dark:border-gray-700 shadow-xl rounded-xl p-2 z-50">
+                  {notifications.length === 0 && (
+                    <p className="text-xs p-3 text-gray-500 text-center">
+                      Nu ai notificări.
+                    </p>
+                  )}
 
-  {notifOpen && (
-    <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-gray-900 border dark:border-gray-700 shadow-xl rounded-xl p-2 z-50">
+                  {notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      className={`relative p-3 rounded-lg text-xs mb-1 transition cursor-pointer ${
+                        n.read
+                          ? "bg-gray-100 dark:bg-gray-800"
+                          : "bg-blue-50 dark:bg-blue-900"
+                      }`}
+                    >
+                      {/* DELETE BTN */}
+                      <button
+                        className="absolute top-2 right-2 text-gray-500 hover:text-red-600"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          await fetch("/api/notifications", {
+                            method: "DELETE",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ id: n.id }),
+                          });
 
-      {notifications.length === 0 && (
-        <p className="text-xs p-3 text-gray-500 text-center">
-          Nu ai notificări.
-        </p>
-      )}
+                          setNotifications((prev) =>
+                            prev.filter((x) => x.id !== n.id)
+                          );
+                          setUnread((prev) => prev - (n.read ? 0 : 1));
+                        }}
+                      >
+                        <X size={12} />
+                      </button>
 
-      {notifications.map((n) => (
-        <div
-          key={n.id}
-          className={`relative p-3 rounded-lg text-xs mb-1 transition cursor-pointer ${
-            n.read
-              ? "bg-gray-100 dark:bg-gray-800"
-              : "bg-blue-50 dark:bg-blue-900"
-          }`}
-        >
-          {/* DELETE BTN */}
-          <button
-            className="absolute top-2 right-2 text-gray-500 hover:text-red-600"
-            onClick={async (e) => {
-              e.stopPropagation();
-              await fetch("/api/notifications", {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: n.id }),
-              });
+                      {/* CLICK → mark read + navigate */}
+                      <div
+                        onClick={async () => {
+                          // mark as read
+                          if (!n.read) {
+                            await fetch("/api/notifications", {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ id: n.id }),
+                            });
 
-              // scoatem instant din UI
-              setNotifications((prev) =>
-                prev.filter((x) => x.id !== n.id)
-              );
-              setUnread((prev) =>
-                prev - (n.read ? 0 : 1)
-              );
-            }}
-          >
-            <X size={12} />
-          </button>
+                            setNotifications((prev) =>
+                              prev.map((x) =>
+                                x.id === n.id ? { ...x, read: true } : x
+                              )
+                            );
+                            setUnread((prev) => prev - 1);
+                          }
 
-          {/* CLICK = mark as read + navigate */}
-          <div
-            onClick={async () => {
-              if (!n.read) {
-                await fetch("/api/notifications", {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ id: n.id }),
-                });
+                          setNotifOpen(false);
 
-                // update instant UI
-                setNotifications((prev) =>
-                  prev.map((x) =>
-                    x.id === n.id ? { ...x, read: true } : x
-                  )
-                );
-                setUnread((prev) => prev - 1);
-              }
-
-              setNotifOpen(false);
-
-              if (n.deviceId) {
-                router.push(`/devices/${n.deviceId}/repair`);
-              }
-            }}
-          >
-            <p className="font-medium">{n.message}</p>
-            <p className="text-[10px] text-gray-500">
-              {new Date(n.createdAt).toLocaleString("ro-RO")}
-            </p>
-          </div>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
+                          // FIX NAVIGATION
+                          if (n.deviceId) {
+                            router.push(`/devices/${n.deviceId}/repair`);
+                          }
+                        }}
+                      >
+                        <p className="font-medium">{n.message}</p>
+                        <p className="text-[10px] text-gray-500">
+                          {new Date(n.createdAt).toLocaleString("ro-RO")}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* THEME SWITCH */}
             <button
@@ -343,6 +354,17 @@ export default function ProtectedLayout({ children }) {
 
         {/* ===================== PAGE CONTENT ===================== */}
         <main className="flex-1 p-4 sm:p-6">{children}</main>
+
+{/* TOASTER GLOBAL */}
+<Toaster
+  position="top-center"
+  toastOptions={{
+    style: {
+      background: "#333",
+      color: "#fff",
+    },
+  }}
+/>
       </div>
     </div>
   );

@@ -13,13 +13,19 @@ export async function GET(request) {
       );
     }
 
+    // 🔹 Luăm device + client + user + repairs
     const device = await prisma.device.findUnique({
       where: { id: deviceId },
       include: {
         client: true,
         user: true,
         repairs: {
-          include: { items: true },
+          include: {
+            items: true,
+            historyNotes: { include: { user: true } },
+            assignedTechnician: true, // ⬅ tehnicianul asignat
+          },
+          orderBy: { createdAt: "desc" },
         },
       },
     });
@@ -31,7 +37,26 @@ export async function GET(request) {
       );
     }
 
-    return NextResponse.json(device);
+    // 🔥 Fișa activă = ultima creată
+    const activeRepair = device.repairs.length > 0 ? device.repairs[0] : null;
+
+    // 🔍 Determinăm tehnicianul asignat
+    let assignedUserId = null;
+    let assignedUserName = null;
+
+    if (activeRepair?.assignedTechnician) {
+      assignedUserId = activeRepair.assignedTechnician.id;
+      assignedUserName = activeRepair.assignedTechnician.name;
+    }
+
+    // 🟦 trimitem un răspuns clar pentru UI
+    return NextResponse.json({
+      device,
+      activeRepair,
+      assignedUserId,
+      assignedUserName,
+    });
+
   } catch (err) {
     console.error("❌ Eroare repair-init:", err);
     return NextResponse.json(

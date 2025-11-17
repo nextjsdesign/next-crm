@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mongodb"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -26,7 +26,7 @@ enum Role {
 //
 
 model User {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  id        String    @id @default(uuid())
   name      String
   email     String    @unique
   password  String
@@ -39,13 +39,13 @@ model User {
   isActive  Boolean   @default(true)
 
   devices       Device[]
-  repairs       Repair[]       @relation("RepairAssignedTech")
+  repairs       Repair[]       @relation("RepairAssignedTech") // Asigned repairs
   notes         RepairNote[]
-  notifications Notification[] // Notificările userului
+  notifications Notification[]
 }
 
 model Client {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(uuid())
   name      String
   phone     String?
   email     String?
@@ -55,24 +55,13 @@ model Client {
   devices Device[]
 }
 
-model Settings {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  companyName String
-  email       String
-  phone       String
-  theme       String   @default("system")
-  logoUrl     String?
-  tabStyle    String   @default("classic")
-  updatedAt   DateTime @updatedAt
-}
-
 model Device {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(uuid())
 
-  clientId String @db.ObjectId
+  clientId String
   client   Client @relation(fields: [clientId], references: [id])
 
-  userId String? @db.ObjectId
+  userId String?
   user   User?   @relation(fields: [userId], references: [id])
 
   parentDeviceId String?
@@ -108,20 +97,14 @@ model Device {
   repairs Repair[]
 }
 
-//
-// ==========================
-//          REPAIR
-// ==========================
-//
-
 model Repair {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(uuid())
 
-  deviceId String @db.ObjectId
+  deviceId String
   device   Device @relation(fields: [deviceId], references: [id])
 
-  assignedTechnicianId String? @db.ObjectId
-  assignedTechnician   User?   @relation("RepairAssignedTech", fields: [assignedTechnicianId], references: [id])
+  assignedTechnicianId String?
+  assignedTechnician   User? @relation("RepairAssignedTech", fields: [assignedTechnicianId], references: [id])
 
   takenAt    DateTime?
   status     String    @default("În lucru")
@@ -136,9 +119,9 @@ model Repair {
 }
 
 model RepairItem {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(uuid())
 
-  repairId String @db.ObjectId
+  repairId String
   repair   Repair @relation(fields: [repairId], references: [id])
 
   kind      String
@@ -147,47 +130,46 @@ model RepairItem {
   unitPrice Float  @default(0)
 }
 
-//
-// ==========================
-//       REPAIR NOTES
-// ==========================
-//
-
 model RepairNote {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id       String   @id @default(uuid())
+  repairId String
+  repair   Repair   @relation(fields: [repairId], references: [id])
 
-  repairId String @db.ObjectId
-  repair   Repair @relation(fields: [repairId], references: [id])
-
-  userId String @db.ObjectId
+  userId String
   user   User   @relation(fields: [userId], references: [id])
 
   message   String
   createdAt DateTime @default(now())
 }
 
-//
-// ==========================
-//       NOTIFICATIONS
-// ==========================
-//
-
 model Notification {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(uuid())
 
-  userId String @db.ObjectId
+  userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  type    String // "note-added" | "status-change" | "assign"
-  message String
-
-  deviceId String? // STRING — pentru a evita erorile ObjectId
-  repairId String? // STRING — la fel
+  type     String
+  message  String
+  deviceId String?
+  repairId String?
 
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+}
 
-  @@index([userId])
-  @@index([repairId])
-  @@index([deviceId])
+//
+// ==========================
+//      SETTINGS !!!
+// ==========================
+//
+
+model Settings {
+  id          String   @id @default(uuid())
+  companyName String
+  email       String
+  phone       String
+  theme       String   @default("system")
+  logoUrl     String?
+  tabStyle    String   @default("classic")
+  updatedAt   DateTime @updatedAt
 }
