@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint"
   },
-    "prisma": {
+  "prisma": {
     "seed": "node prisma/seed-demo.js"
   },
   "dependencies": {
