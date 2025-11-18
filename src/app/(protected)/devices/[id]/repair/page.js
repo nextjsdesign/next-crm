@@ -419,6 +419,7 @@ export default function DeviceRepairPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           repairId,
+          deviceId,
           userId: currentUserId,
           message: newNote.trim(),
         }),

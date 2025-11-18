@@ -1,17 +1,32 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-/** ------------------------------------------------------------------
- *  GET  - Returnează toate notele pentru un repairId
- * ------------------------------------------------------------------*/
+/* -----------------------------------------------------------
+   Funcție utilitară pentru notificări
+------------------------------------------------------------ */
+async function sendNotification(userId, message, deviceId, repairId) {
+  if (!userId) return;
+
+  return prisma.notification.create({
+    data: {
+      userId,
+      type: "note-added",
+      message,
+      deviceId,
+      repairId,
+    },
+  });
+}
+
+/* -----------------------------------------------------------
+   GET – toate notele
+------------------------------------------------------------ */
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
     const repairId = searchParams.get("repairId");
 
-    if (!repairId) {
-      return NextResponse.json({ notes: [] });
-    }
+    if (!repairId) return NextResponse.json({ notes: [] });
 
     const notes = await prisma.repairNote.findMany({
       where: { repairId },
@@ -22,66 +37,44 @@ export async function GET(req) {
     return NextResponse.json({ notes });
   } catch (err) {
     console.error("GET /repair-notes error:", err);
-    return NextResponse.json(
-      { error: "Eroare la încărcarea notelor." },
-      { status: 500 }
-    );
+    return NextResponse.json({ notes: [] });
   }
 }
 
-/** ------------------------------------------------------------------
- *  POST - Adaugă o notă
- *  Dacă repairId NU există → creează automat un repair minim
- * ------------------------------------------------------------------*/
+/* -----------------------------------------------------------
+   POST – adaugă o notă + trimite notificări
+------------------------------------------------------------ */
 export async function POST(req) {
   try {
-    const body = await req.json();
-    let { repairId, deviceId, userId, message } = body;
+    const { repairId, deviceId, userId, message } = await req.json();
 
-    if (!userId) {
+    if (!userId || !message?.trim()) {
       return NextResponse.json(
-        { error: "Userul nu este valid." },
+        { error: "Date insuficiente." },
         { status: 400 }
       );
     }
 
-    if (!message?.trim()) {
+    // 1️⃣ Căutăm repair + device
+    const repair = await prisma.repair.findUnique({
+      where: { id: repairId },
+      include: { device: true },
+    });
+
+    if (!repair) {
       return NextResponse.json(
-        { error: "Mesajul notei nu poate fi gol." },
-        { status: 400 }
+        { error: "Fișa nu există." },
+        { status: 404 }
       );
     }
 
-    // Dacă nu avem repairId → îi facem unul
-    let repair = null;
+    const device = repair.device;
+    const deviceCode = device?.formCode || device?.id || deviceId || repairId;
 
-    if (!repairId) {
-      if (!deviceId) {
-        return NextResponse.json(
-          { error: "Lipsește deviceId pentru a crea automat fișa." },
-          { status: 400 }
-        );
-      }
+    // Autorul notei
+    const author = await prisma.user.findUnique({ where: { id: userId } });
 
-      // Căutăm un repair deja existent pentru device
-      repair = await prisma.repair.findFirst({
-        where: { deviceId },
-      });
-
-      // Dacă nu există → îl creăm automat
-      if (!repair) {
-        repair = await prisma.repair.create({
-          data: {
-            deviceId,
-            status: "În lucru",
-          },
-        });
-      }
-
-      repairId = repair.id;
-    }
-
-    // Creăm nota
+    // 2️⃣ Salvăm nota
     const note = await prisma.repairNote.create({
       data: {
         repairId,
@@ -91,11 +84,84 @@ export async function POST(req) {
       include: { user: true },
     });
 
+    /* ============================================================
+      LOGICĂ NOTIFICĂRI EXACT CA ÎNAINTE
+    ============================================================ */
+
+    const assignedTech = repair.assignedTechnicianId;
+
+    // ⚠️ FIȘA NU ESTE ASIGNATĂ
+    if (!assignedTech) {
+      // Notificăm TOȚI TEHNICIENII (mai puțin autorul)
+      const techs = await prisma.user.findMany({
+        where: { role: "technician" },
+      });
+
+      for (const t of techs) {
+        if (t.id !== userId) {
+          await sendNotification(
+            t.id,
+            `${author.name} a adăugat o notă la fișa #${deviceCode}`,
+            deviceId,
+            repairId
+          );
+        }
+      }
+
+      // notificăm adminii
+      const admins = await prisma.user.findMany({
+        where: { role: "admin" },
+      });
+
+      for (const admin of admins) {
+        if (admin.id !== userId) {
+          await sendNotification(
+            admin.id,
+            `${author.name} a adăugat o notă la fișa #${deviceCode}`,
+            deviceId,
+            repairId
+          );
+        }
+      }
+    }
+
+    // ⚠️ FIȘA ESTE ASIGNATĂ
+    else {
+      // autorul este tehnicianul asignat
+      if (assignedTech === userId) {
+        // notificăm ADMINII
+        const admins = await prisma.user.findMany({
+          where: { role: "admin" },
+        });
+
+        for (const admin of admins) {
+          if (admin.id !== userId) {
+            await sendNotification(
+              admin.id,
+              `${author.name} a scris o notă în fișa #${deviceCode}`,
+              deviceId,
+              repairId
+            );
+          }
+        }
+      }
+
+      // autorul este ADMIN
+      else if (author.role === "admin") {
+        await sendNotification(
+          assignedTech,
+          `Administratorul ${author.name} a scris o notă în fișa #${deviceCode}`,
+          deviceId,
+          repairId
+        );
+      }
+    }
+
     return NextResponse.json({ note });
   } catch (err) {
     console.error("POST /repair-notes error:", err);
     return NextResponse.json(
-      { error: "Eroare la adăugarea notei." },
+      { error: "Eroare server." },
       { status: 500 }
     );
   }

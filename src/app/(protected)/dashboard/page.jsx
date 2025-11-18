@@ -13,7 +13,7 @@ import {
   Pencil,
   Trash2,
   Plus,
-  Wrench
+  Wrench,
 } from "lucide-react";
 
 const STATUS_TABS = [
@@ -29,17 +29,19 @@ const STATUS_TABS = [
 ];
 
 const DEFAULT_COLUMNS = {
+  code: true,      // 👈 nou: Cod fișă (formCode)
   client: true,
-  phone: true, // controlează arătarea telefonului+email-ului sub nume
+  phone: true,     // controlează arătarea telefonului sub nume
   device: true,
-  model: true, // controlează arătarea seriei sub dispozitiv
+  model: true,     // controlează arătarea seriei sub dispozitiv
   status: true,
   technician: true,
   price: true,
   createdAt: true,
 };
 
-const COLUMNS_STORAGE_KEY = "devices_visible_columns_v1";
+// am schimbat key-ul ca să nu strice preferințele vechi
+const COLUMNS_STORAGE_KEY = "devices_visible_columns_v2";
 const ITEMS_PER_PAGE = 10;
 
 export default function DevicesPage() {
@@ -211,17 +213,14 @@ export default function DevicesPage() {
     if (search.trim()) {
       const term = search.toLowerCase();
       const clientName =
-        d.clientName ||
-        d.client?.name ||
-        d.client_name ||
-        d.client ||
-        "";
+        d.clientName || d.client?.name || d.client_name || d.client || "";
       const phone =
         d.clientPhone || d.client?.phone || d.phone || d.telefon || "";
       const deviceLabel =
         d.deviceType || d.device || d.device_type || d.deviceName || "";
       const model = d.model || d.modelName || "";
       const technician = d.technician || d.user?.name || "";
+      const formCode = d.formCode || ""; // 👈 căutăm și în cod fișă
 
       const haystack = [
         clientName,
@@ -230,6 +229,7 @@ export default function DevicesPage() {
         model,
         technician,
         d.status || "",
+        formCode,
       ]
         .join(" ")
         .toLowerCase();
@@ -502,7 +502,7 @@ export default function DevicesPage() {
                       onClick={() => setStatusFilter(t.value)}
                       className={`
                         px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap
-                        transition-all duration-200 border border-transparent
+                        transition-all durata-200 border border-transparent
                         ${
                           isActive
                             ? statusSoftBg(t.value) + " shadow-sm scale-[1.03]"
@@ -529,7 +529,7 @@ export default function DevicesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Caută după client, telefon, model, tehnician..."
+                placeholder="Caută după cod fișă, client, telefon, model, tehnician..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 text-sm outline-none"
@@ -633,10 +633,12 @@ export default function DevicesPage() {
                       className="rounded border-gray-300 text-blue-600"
                     />
                     <span>
-                      {key === "client"
+                      {key === "code"
+                        ? "Cod fișă"
+                        : key === "client"
                         ? "Client"
                         : key === "phone"
-                        ? "Telefon + email în client"
+                        ? "Telefon în client"
                         : key === "device"
                         ? "Dispozitiv"
                         : key === "model"
@@ -702,6 +704,11 @@ export default function DevicesPage() {
             <table className="min-w-full text-[15px]">
               <thead className="bg-gray-100 dark:bg-gray-900/60 text-gray-700 dark:text-gray-300">
                 <tr>
+                  {visibleColumns.code && (
+                    <th className="px-3 py-2 text-left font-medium text-[13px]">
+                      Cod fișă
+                    </th>
+                  )}
                   {visibleColumns.client && (
                     <th className="px-3 py-2 text-left font-medium text-[13px]">
                       Client
@@ -750,20 +757,16 @@ export default function DevicesPage() {
                     d.phone ||
                     d.telefon ||
                     "";
-                  const email = d.client?.email || d.email || "";
-
                   const type = d.deviceType || "";
                   const brand = d.brand || "";
                   const model = d.model || d.modelName || "";
                   const serial =
                     d.serialNumber || d.serial_no || d.sn || "";
-
                   const combinedDevice =
                     [type, brand, model].filter(Boolean).join(" ") ||
                     d.device ||
                     d.device_type ||
                     "Dispozitiv";
-
                   const technician = d.technician || d.user?.name || "-";
                   const price =
                     d.priceEstimate ??
@@ -771,6 +774,7 @@ export default function DevicesPage() {
                     d.total ??
                     d.totalPrice ??
                     null;
+                  const formCode = d.formCode || d.id || "-";
 
                   return (
                     <tr
@@ -781,21 +785,26 @@ export default function DevicesPage() {
                           : "bg-gray-50 dark:bg-gray-900/20"
                       }`}
                     >
-                      {/* CLIENT: nume bold + telefon/email dedesubt */}
+                      {/* COD FIȘĂ */}
+                      {visibleColumns.code && (
+                        <td className="px-3 py-2 align-middle">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-[12px] font-mono bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-100">
+                            {formCode}
+                          </span>
+                        </td>
+                      )}
+
+                      {/* CLIENT: nume bold + telefon dedesubt */}
                       {visibleColumns.client && (
                         <td className="px-3 py-2 text-gray-900 dark:text-gray-100 align-top">
                           <div className="flex flex-col">
                             <span className="font-semibold">
                               {clientName}
                             </span>
-                            {visibleColumns.phone && (
-                              <>
-                                {phone && (
-                                  <span className="text-[13px] text-gray-600 dark:text-gray-300">
-                                    {phone}
-                                  </span>
-                                )}
-                              </>
+                            {visibleColumns.phone && phone && (
+                              <span className="text-[13px] text-gray-600 dark:text-gray-300">
+                                {phone}
+                              </span>
                             )}
                           </div>
                         </td>
@@ -874,19 +883,17 @@ export default function DevicesPage() {
                               }
                             }}
                           />
-                          {/* 🔧 FIȘĂ DE REPARAȚIE */}
-    <ActionIconButton
-      icon={Wrench}
-      title="Fișă reparație"
-      onClick={() => {
-        if (d.id) {
-          router.push(`/devices/${d.id}/repair`);
-        } else {
-          toast.info("Fișa nu are id disponibil.");
-        }
-      }}
-    />
-
+                          <ActionIconButton
+                            icon={Wrench}
+                            title="Fișă reparație"
+                            onClick={() => {
+                              if (d.id) {
+                                router.push(`/devices/${d.id}/repair`);
+                              } else {
+                                toast.info("Fișa nu are id disponibil.");
+                              }
+                            }}
+                          />
                           <ActionIconButton
                             icon={Trash2}
                             title="Șterge"
@@ -905,114 +912,135 @@ export default function DevicesPage() {
             </table>
           </div>
 
-          {/* Mobile cards */}
-<div className="sm:hidden space-y-4">
-  {paginatedDevices.map((d, index) => {
-    const clientName =
-      d.clientName ||
-      d.client?.name ||
-      d.client_name ||
-      "Client necunoscut";
+          {/* 📱 Mobile cards */}
+          <div className="sm:hidden space-y-4">
+            {paginatedDevices.map((d, index) => {
+              const clientName =
+                d.clientName ||
+                d.client?.name ||
+                d.client_name ||
+                "Client necunoscut";
 
-    const deviceLabel = [
-      d.deviceType || d.device || d.device_type || "",
-      d.brand || "",
-      d.model || "",
-    ]
-      .filter(Boolean)
-      .join(" ");
+              const deviceLabel = [
+                d.deviceType || d.device || d.device_type || "",
+                d.brand || "",
+                d.model || "",
+              ]
+                .filter(Boolean)
+                .join(" ");
 
-    const defect = d.problem || d.description || "-";
-    const technician = d.technician || d.user?.name || "-";
-    const price =
-      d.priceEstimate ?? d.price ?? d.total ?? d.totalPrice ?? null;
+              const defect = d.problem || d.description || "-";
+              const technician = d.technician || d.user?.name || "-";
+              const price =
+                d.priceEstimate ??
+                d.price ??
+                d.total ??
+                d.totalPrice ??
+                null;
+              const formCode = d.formCode || d.id || "-";
 
-    return (
-      <div
-        key={d.id || index}
-        className="border border-gray-200 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-800 shadow-sm p-4 space-y-3 w-full"
-      >
-        {/* HEADER */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            {/* CLIENT */}
-            <p className="text-xs text-gray-400 dark:text-gray-500">CLIENT</p>
-            <h2 className="font-semibold text-gray-900 dark:text-gray-50 truncate">
-              {clientName}
-            </h2>
+              return (
+                <div
+                  key={d.id || index}
+                  className="border border-gray-200 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-800 shadow-sm p-4 space-y-3 w-full"
+                >
+                  {/* HEADER */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      {/* CLIENT */}
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                        COD FIȘĂ · CLIENT
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-100">
+                          {formCode}
+                        </span>
+                        <h2 className="font-semibold text-gray-900 dark:text-gray-50 truncate">
+                          {clientName}
+                        </h2>
+                      </div>
 
-            {/* DEVICE */}
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-              {deviceLabel}
-            </p>
+                      {/* DEVICE */}
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                        {deviceLabel}
+                      </p>
+                    </div>
+
+                    {/* STATUS BADGE */}
+                    <span
+                      className={`px-2 py-1 rounded-full text-[11px] font-medium ${statusBadge(
+                        d.status
+                      )}`}
+                    >
+                      {d.status || "—"}
+                    </span>
+                  </div>
+
+                  {/* DEFECT */}
+                  <div>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                      DEFECT RECLAMAT
+                    </p>
+                    <p className="text-sm text-gray-800 dark:text-gray-200 font-medium line-clamp-2">
+                      {defect}
+                    </p>
+                  </div>
+
+                  {/* TEHNICIAN + PREȚ */}
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400">
+                        Tehnician
+                      </p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                        {technician}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-gray-500 dark:text-gray-400">
+                        Preț estimat
+                      </p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">
+                        {formatPrice(price)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* DATE + ACTIONS — aceeași linie */}
+                  <div className="flex items-center justify-between pt-2 mt-1 border-t border-dashed border-gray-200 dark:border-gray-700">
+                    {/* DATA ÎN STÂNGA */}
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                      {formatDate(d.createdAt)}
+                    </span>
+
+                    {/* ACTIONS ÎN DREAPTA */}
+                    <div className="flex items-center gap-2">
+                      <ActionIconButton
+                        icon={Eye}
+                        title="Deschide fișa"
+                        onClick={() => d.id && router.push(`/devices/${d.id}`)}
+                      />
+                      <ActionIconButton
+                        icon={Pencil}
+                        title="Editează"
+                        onClick={() =>
+                          d.id && router.push(`/devices/${d.id}?edit=1`)
+                        }
+                      />
+                      <ActionIconButton
+                        icon={Wrench}
+                        title="Fișă reparație"
+                        onClick={() =>
+                          d.id && router.push(`/devices/${d.id}/repair`)
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-
-          {/* STATUS BADGE */}
-          <span
-            className={`px-2 py-1 rounded-full text-[11px] font-medium ${statusBadge(
-              d.status
-            )}`}
-          >
-            {d.status || "—"}
-          </span>
-        </div>
-
-        {/* DEFECT */}
-        <div>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500">DEFECT RECLAMAT</p>
-          <p className="text-sm text-gray-800 dark:text-gray-200 font-medium line-clamp-2">
-            {defect}
-          </p>
-        </div>
-
-        {/* TEHNICIAN + PREȚ */}
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          <div>
-            <p className="text-gray-500 dark:text-gray-400">Tehnician</p>
-            <p className="font-medium text-gray-900 dark:text-gray-100">
-              {technician}
-            </p>
-          </div>
-
-          <div className="text-right">
-            <p className="text-gray-500 dark:text-gray-400">Preț estimat</p>
-            <p className="font-semibold text-gray-900 dark:text-gray-100">
-              {formatPrice(price)}
-            </p>
-          </div>
-        </div>
-
-        {/* DATE + ACTIONS — aceeași linie */}
-        <div className="flex items-center justify-between pt-2 mt-1 border-t border-dashed border-gray-200 dark:border-gray-700">
-
-          {/* DATA ÎN STÂNGA */}
-          <span className="text-[11px] text-gray-500 dark:text-gray-400">
-            {formatDate(d.createdAt)}
-          </span>
-
-          {/* ACTIONS ÎN DREAPTA */}
-          <div className="flex items-center gap-2">
-            <ActionIconButton
-              icon={Eye}
-              title="Deschide fișa"
-              onClick={() => d.id && router.push(`/devices/${d.id}`)}
-            />
-            <ActionIconButton
-              icon={Pencil}
-              title="Editează"
-              onClick={() => d.id && router.push(`/devices/${d.id}?edit=1`)}
-            />
-            <ActionIconButton
-            icon={Wrench}
-             title="Fișă reparație"
-             onClick={() => d.id && router.push(`/devices/${d.id}/repair`)}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  })}
-</div>
 
           {/* Pagination */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300">

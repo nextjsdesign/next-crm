@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-/**
- * 🔹 GET — Returnează toate fișele de service
- */
+/* ======================================================
+   📌 GENERATOR COD UNIC FIȘĂ (ex: A7K2B)
+====================================================== */
+function generateFormCode(length = 5) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "";
+  for (let i = 0; i < length; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+/* ======================================================
+   📌 GET — Toate fișele
+====================================================== */
 export async function GET() {
   try {
     const devices = await prisma.device.findMany({
@@ -21,14 +33,14 @@ export async function GET() {
   }
 }
 
-/**
- * 🔹 POST — Creează o fișă nouă
- */
+/* ======================================================
+   📌 POST — Creează fișă + GENEREAZĂ formCode
+====================================================== */
 export async function POST(request) {
   try {
     const data = await request.json();
 
-    // Verificăm clientul existent sau îl creăm
+    // căutăm client existent
     let client = await prisma.client.findFirst({
       where: {
         name: data.clientName,
@@ -47,8 +59,7 @@ export async function POST(request) {
       });
     }
 
-    // ⬆️ copiat din list/route.js (corect)
-
+    // device părinte
     let parentDevice = null;
     if (data.selectedDeviceId) {
       parentDevice = await prisma.device.findUnique({
@@ -56,9 +67,18 @@ export async function POST(request) {
       });
     }
 
-    // Creăm fișa nouă
+    // 🔥 GENERĂM COD UNIC
+    let formCode = generateFormCode();
+
+    // verificăm să nu existe duplicat
+    while (await prisma.device.findFirst({ where: { formCode } })) {
+      formCode = generateFormCode();
+    }
+
     const device = await prisma.device.create({
       data: {
+        formCode, // 🔥 cod unic fișă
+
         clientId: client.id,
         parentDeviceId: data.selectedDeviceId || null,
         sheetType: data.sheetType || "Nouă",
@@ -95,16 +115,19 @@ export async function POST(request) {
   }
 }
 
-/**
- * 🔹 PUT — Actualizează o fișă existentă
- */
+/* ======================================================
+   📌 PUT — Actualizează fișă
+====================================================== */
 export async function PUT(request) {
   try {
     const data = await request.json();
     const { id, clientName, phone, email, ...updateData } = data;
 
     if (!id) {
-      return NextResponse.json({ error: "ID lipsă pentru actualizare." }, { status: 400 });
+      return NextResponse.json(
+        { error: "ID lipsă pentru actualizare." },
+        { status: 400 }
+      );
     }
 
     let client = await prisma.client.findFirst({
@@ -156,15 +179,18 @@ export async function PUT(request) {
   }
 }
 
-/**
- * 🔹 DELETE — Șterge fișa
- */
+/* ======================================================
+   📌 DELETE — Șterge fișa
+====================================================== */
 export async function DELETE(request) {
   try {
     const { id } = await request.json();
 
     if (!id) {
-      return NextResponse.json({ error: "ID lipsă pentru ștergere." }, { status: 400 });
+      return NextResponse.json(
+        { error: "ID lipsă pentru ștergere." },
+        { status: 400 }
+      );
     }
 
     await prisma.device.delete({ where: { id } });

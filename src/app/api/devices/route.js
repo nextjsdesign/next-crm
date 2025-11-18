@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { generateFormCode } from "@/lib/generateFormCode";
+import { nanoid } from "nanoid";
 
-/**
- * 🔹 POST — Creează o fișă nouă
- */
+/* ================================================================
+   🔹 POST — Creează o fișă nouă (cu formCode generat automat)
+================================================================ */
 export async function POST(request) {
   try {
     const data = await request.json();
 
-    // Verificăm clientul existent sau îl creăm
+    // 🔍 1) Verificăm clientul sau îl creăm
     let client = await prisma.client.findFirst({
       where: {
         name: data.clientName,
@@ -27,6 +29,7 @@ export async function POST(request) {
       });
     }
 
+    // 🔍 2) Preluăm device părinte dacă există
     let parentDevice = null;
     if (data.selectedDeviceId) {
       parentDevice = await prisma.device.findUnique({
@@ -34,8 +37,20 @@ export async function POST(request) {
       });
     }
 
+    // 🔥 3) Generăm formCode unic
+    let formCode = generateFormCode();
+    let exists = await prisma.device.findUnique({ where: { formCode } });
+
+    while (exists) {
+      formCode = generateFormCode();
+      exists = await prisma.device.findUnique({ where: { formCode } });
+    }
+
+    // 🛠️ 4) Creăm fișa nouă cu formCode
     const device = await prisma.device.create({
       data: {
+        publicToken: nanoid(12),
+        
         clientId: client.id,
         parentDeviceId: data.selectedDeviceId || null,
         sheetType: data.sheetType || "Nouă",
@@ -61,6 +76,9 @@ export async function POST(request) {
 
         receptionCondition: data.receptionCondition || "",
         receptionNotes: data.receptionNotes || "",
+
+        // ⭐ Cod unic
+        formCode: formCode,
       },
       include: { client: true },
     });
@@ -72,17 +90,19 @@ export async function POST(request) {
   }
 }
 
-/**
- * 🔹 PUT — Actualizează o fișă existentă
- */
+/* ================================================================
+   🔹 PUT — Actualizează o fișă existentă
+================================================================ */
 export async function PUT(request) {
   try {
     const data = await request.json();
-
     const { id, clientName, phone, email, ...updateData } = data;
 
     if (!id) {
-      return NextResponse.json({ error: "ID lipsă pentru actualizare." }, { status: 400 });
+      return NextResponse.json(
+        { error: "ID lipsă pentru actualizare." },
+        { status: 400 }
+      );
     }
 
     let client = await prisma.client.findFirst({
@@ -113,14 +133,20 @@ export async function PUT(request) {
         accessories: updateData.accessories || "",
         description: updateData.description || "",
         technician: updateData.technician || "",
-        priceEstimate: updateData.priceEstimate ? parseFloat(updateData.priceEstimate) : 0,
+        priceEstimate: updateData.priceEstimate
+          ? parseFloat(updateData.priceEstimate)
+          : 0,
         advance: updateData.advance ? parseFloat(updateData.advance) : 0,
         warranty: updateData.warranty || null,
         priceConfirmed: updateData.priceConfirmed || false,
         liquidContact: updateData.liquidContact || false,
-        deliveryDays: updateData.deliveryDays ? parseInt(updateData.deliveryDays) : null,
+        deliveryDays: updateData.deliveryDays
+          ? parseInt(updateData.deliveryDays)
+          : null,
         notes: updateData.notes || "",
-        deliveryDate: updateData.deliveryDate ? new Date(updateData.deliveryDate) : null,
+        deliveryDate: updateData.deliveryDate
+          ? new Date(updateData.deliveryDate)
+          : null,
         receptionCondition: updateData.receptionCondition || "",
         receptionNotes: updateData.receptionNotes || "",
       },
@@ -134,18 +160,22 @@ export async function PUT(request) {
   }
 }
 
-/**
- * 🔹 DELETE — Șterge fișa
- */
+/* ================================================================
+   🔹 DELETE — Șterge fișa
+================================================================ */
 export async function DELETE(request) {
   try {
     const { id } = await request.json();
 
     if (!id) {
-      return NextResponse.json({ error: "ID lipsă pentru ștergere." }, { status: 400 });
+      return NextResponse.json(
+        { error: "ID lipsă pentru ștergere." },
+        { status: 400 }
+      );
     }
 
     await prisma.device.delete({ where: { id } });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("❌ Eroare DELETE /devices:", error);

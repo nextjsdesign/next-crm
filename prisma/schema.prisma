@@ -37,6 +37,8 @@ model Client {
 
 model Device {
   id                 String    @id @default(uuid())
+  formCode  String   @unique
+  publicToken        String  @unique
   clientId           String
   userId             String?
   parentDeviceId     String?

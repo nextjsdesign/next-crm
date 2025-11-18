@@ -1,6 +1,8 @@
-import { prisma } from "../../../../lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import PrintButton from "./PrintButton"; // ← componentă CLIENT
+
 import {
   ArrowLeft,
   Calendar,
@@ -11,41 +13,26 @@ import {
 } from "lucide-react";
 
 export default async function DeviceDetailsPage(props) {
-  const params = await props.params; // ✅ Next.js 16 necesită await
+  // 🔥 În Next.js 15/16, params este async → necesită await
+  const params = await props.params;
   const id = params?.id;
 
-  console.log("🔍 Parametru primit:", id);
+  if (!id) return notFound();
 
-  if (!id) {
-    console.error("❌ ID invalid sau lipsă:", params);
-    return notFound();
-  }
-
+  // 📌 Luăm fișa din DB
   let device = null;
-
   try {
-    // încearcă după id
     device = await prisma.device.findUnique({
       where: { id },
       include: { client: true },
     });
-
-    // dacă nu merge, încearcă după _id
-    if (!device) {
-      device = await prisma.device.findFirst({
-        where: { _id: id },
-        include: { client: true },
-      });
-    }
   } catch (err) {
     console.error("❌ Eroare Prisma:", err);
   }
 
-  if (!device) {
-    console.error("❌ Fișă negăsită pentru ID:", id);
-    return notFound();
-  }
+  if (!device) return notFound();
 
+  // 🎨 Culori status
   const getStatusColor = (status) => {
     switch (status) {
       case "Reparat":
@@ -63,22 +50,39 @@ export default async function DeviceDetailsPage(props) {
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
+      {/* HEADER */}
       <div className="flex items-center justify-between mb-8">
+
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-          <ClipboardList className="w-7 h-7 text-blue-600" /> Detalii fișă service
+          <ClipboardList className="w-7 h-7 text-blue-600" />
+          Detalii fișă service
         </h1>
-        <Link
-          href="/devices"
-          className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 transition"
-        >
-          <ArrowLeft className="w-5 h-5" /> Înapoi la listă
-        </Link>
+
+        {/* 🔵 Print + Back */}
+        <div className="flex items-center gap-3">
+
+          {/* 🖨️ PrintButton (CLIENT COMPONENT) */}
+          <PrintButton deviceId={id} />
+
+          <Link
+            href="/devices"
+            className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 
+            dark:bg-gray-700 dark:hover:bg-gray-600 px-4 py-2 rounded-lg 
+            text-gray-700 dark:text-gray-200 transition"
+          >
+            <ArrowLeft className="w-5 h-5" /> Înapoi
+          </Link>
+        </div>
       </div>
 
+      {/* GRID INFO */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Info client */}
-        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800 dark:text-gray-100">
+
+        {/* CLIENT */}
+        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 
+        border border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 
+          text-gray-800 dark:text-gray-100">
             <User className="w-5 h-5 text-blue-500" /> Client
           </h2>
           <p><b>Nume:</b> {device.client?.name || "—"}</p>
@@ -86,9 +90,11 @@ export default async function DeviceDetailsPage(props) {
           <p><b>Email:</b> {device.client?.email || "—"}</p>
         </div>
 
-        {/* Info dispozitiv */}
-        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800 dark:text-gray-100">
+        {/* DEVICE */}
+        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 
+        border border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 
+          text-gray-800 dark:text-gray-100">
             <Smartphone className="w-5 h-5 text-blue-500" /> Dispozitiv
           </h2>
           <p><b>Tip:</b> {device.deviceType || "—"}</p>
@@ -97,12 +103,15 @@ export default async function DeviceDetailsPage(props) {
           <p><b>Serie:</b> {device.serialNumber || "—"}</p>
         </div>
 
-        {/* Problemă */}
-        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 border border-gray-200 dark:border-gray-700 md:col-span-2">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800 dark:text-gray-100">
+        {/* PROBLEMĂ */}
+        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 
+        border border-gray-200 dark:border-gray-700 md:col-span-2">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 
+          text-gray-800 dark:text-gray-100">
             <Wrench className="w-5 h-5 text-blue-500" /> Descriere / Problemă
           </h2>
           <p>{device.problem || device.description || "—"}</p>
+
           {device.notes && (
             <p className="text-sm italic text-gray-500 mt-2">
               📝 Observații: {device.notes}
@@ -110,19 +119,39 @@ export default async function DeviceDetailsPage(props) {
           )}
         </div>
 
-        {/* Detalii service */}
-        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 border border-gray-200 dark:border-gray-700 md:col-span-2">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800 dark:text-gray-100">
+        {/* SERVICE DETAILS */}
+        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 
+        border border-gray-200 dark:border-gray-700 md:col-span-2">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 
+          text-gray-800 dark:text-gray-100">
             <Calendar className="w-5 h-5 text-blue-500" /> Detalii service
           </h2>
           <div className="grid sm:grid-cols-2 gap-2">
-            <p><b>Data primirii:</b> {new Date(device.createdAt).toLocaleDateString("ro-RO")}</p>
-            <p><b>Data livrării:</b> {device.deliveryDate ? new Date(device.deliveryDate).toLocaleDateString("ro-RO") : "—"}</p>
+
+            <p><b>Cod fișă:</b> {device.formCode}</p>
+
+            <p><b>Data primirii:</b> 
+              {new Date(device.createdAt).toLocaleDateString("ro-RO")}
+            </p>
+
             <p><b>Tehnician:</b> {device.technician || "—"}</p>
-            <p><b>Preț estimativ:</b> {device.priceEstimate ? `${device.priceEstimate} lei` : "—"}</p>
-            <p><b>Status:</b> <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(device.status)}`}>{device.status}</span></p>
+
+            <p><b>Preț estimativ:</b> 
+              {device.priceEstimate ? `${device.priceEstimate} lei` : "—"}
+            </p>
+
+            <p><b>Status:</b> 
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-semibold 
+                ${getStatusColor(device.status)}`}
+              >
+                {device.status}
+              </span>
+            </p>
+
           </div>
         </div>
+
       </div>
     </div>
   );

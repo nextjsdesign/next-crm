@@ -180,3 +180,44 @@ html, body {
   overflow-x: hidden !important;
   max-width: 100vw !important;
 }
+
+/* ======== PRINT FIXES ======== */
+@media print {
+  .page-break {
+    page-break-before: always;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  html, body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* ASCUNDE DOAR SIDEBAR ȘI NAVBAR ÎN MODUL PRINT */
+@media print {
+  /* Sidebar-ul din layout */
+  aside {
+    display: none !important;
+  }
+
+  /* Navbar-ul din layout */
+  header[role="navigation"],
+  header.sticky {
+    display: none !important;
+  }
+
+  /* Elimină marginile din layout */
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  body, html {
+    background: white !important;
+  }
+}
