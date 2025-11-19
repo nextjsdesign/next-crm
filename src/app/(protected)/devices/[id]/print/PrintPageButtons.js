@@ -1,27 +1,27 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Printer, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 
-export default function PrintPageButtons({ id }) {
+export default function PrintPageButtons() {
   const router = useRouter();
 
   return (
-    <div className="flex justify-between mb-6 print:hidden">
+    <div className="print:hidden w-[210mm] flex justify-between mb-4">
       <button
-        onClick={() => router.back()}
-        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-black rounded-lg flex items-center gap-2"
+        onClick={() => window.print()}
+        className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow"
       >
-        <ArrowLeft size={18} />
-        Înapoi
+        <Printer className="inline w-4 h-4 mr-1" />
+        Printează
       </button>
 
       <button
-        onClick={() => window.print()}
-        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
+        onClick={() => router.back()}
+        className="px-4 py-2 bg-gray-300 text-black rounded-lg shadow"
       >
-        <Printer size={18} />
-        Prin­tează
+        <ArrowLeft className="inline w-4 h-4 mr-1" />
+        Înapoi
       </button>
     </div>
   );
