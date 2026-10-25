@@ -54,8 +54,7 @@ export default function ProtectedLayout({ children }) {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  // Close avatar dropdown
-  useEffect(() => {
+  // Închide dropdown-urile și la navigare, inclusiv Back/Forward.\n  useEffect(() => {\n    setDropdownOpen(false);\n    setNotifOpen(false);\n  }, [pathname]);\n\n  // Close avatar dropdown\n  useEffect(() => {
     if (!dropdownOpen) return;
 
     const handler = (e) => {
@@ -361,19 +360,19 @@ export default function ProtectedLayout({ children }) {
               ref={dropdownRef}
               className="fixed top-16 right-4 z-[9999] w-44 bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-xl rounded-lg p-2"
             >
-              <Link href="/profile" className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <Link href="/profile" onClick={() => setDropdownOpen(false)} className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
                 Profil
               </Link>
 
               {session.user.role === "admin" && (
-                <Link href="/settings" className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <Link href="/settings" onClick={() => setDropdownOpen(false)} className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
                   Setări
                 </Link>
               )}
 
               <button
                 className="w-full text-left px-3 py-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={() => { setDropdownOpen(false); signOut({ callbackUrl: "/login" }); }}
               >
                 Delogare
               </button>
