@@ -2,10 +2,12 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Loader2, Eye, EyeOff, ShieldCheck, ClipboardList, Wrench, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Loader2, Eye, EyeOff, ShieldCheck, ClipboardList, Wrench, ArrowRight, CheckCircle2, Sun, Moon, Monitor } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -54,7 +56,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f7fb] text-slate-900 lg:grid lg:grid-cols-2">
+    <div className="min-h-screen bg-[#f5f7fb] text-slate-900 transition-colors dark:bg-[#0b1220] dark:text-slate-100 lg:grid lg:grid-cols-2">
       <section className="relative hidden min-h-screen flex-col justify-between overflow-hidden bg-[#101f38] px-12 py-12 text-white lg:flex xl:px-20">
         <div className="pointer-events-none absolute -right-32 top-20 h-96 w-96 rounded-full bg-blue-500/15 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-cyan-400/10 blur-3xl" />
@@ -74,31 +76,31 @@ export default function LoginPage() {
         <p className="relative text-sm text-slate-400">© {new Date().getFullYear()} Devize Service · Platformă pentru profesioniști</p>
       </section>
 
-      <main className="flex min-h-screen flex-col px-5 py-8 sm:px-10 lg:justify-center lg:px-16 xl:px-24">
-        <div className="mb-12 flex items-center gap-3 lg:hidden">
+      <main className="flex min-h-screen flex-col px-4 py-6 sm:px-10 lg:justify-center lg:px-16 xl:px-24">
+        <div className="mb-8 flex items-center gap-3 px-2 lg:hidden">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#2563eb] text-white"><ClipboardList size={23} /></div>
-          <span className="text-xl font-bold text-[#101f38]">Devize<span className="text-blue-600">Service</span></span>
+          <span className="text-xl font-bold text-[#101f38] dark:text-white">Devize<span className="text-blue-600">Service</span></span>
         </div>
-        <div className="mx-auto w-full max-w-[430px]">
+        <div className="mx-auto w-full max-w-[430px] rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-xl shadow-slate-200/40 dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/20 sm:p-9 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:dark:bg-transparent">
           <div className="mb-9">
             <div className="mb-4 hidden h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 lg:flex"><ShieldCheck size={27} /></div>
-            <h2 className="text-3xl font-bold tracking-tight text-[#101f38]">Bine ai revenit!</h2>
-            <p className="mt-2 text-slate-500">Autentifică-te pentru a accesa panoul de administrare.</p>
+            <h2 className="text-3xl font-bold tracking-tight text-[#101f38] dark:text-white">Bine ai revenit!</h2>
+            <p className="mt-2 text-slate-500 dark:text-slate-400">Autentifică-te pentru a accesa panoul de administrare.</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
             <div>
-              <label htmlFor="login-email" className="mb-2 block text-sm font-semibold text-slate-700">Adresă de email</label>
-              <input id="login-email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="nume@companie.ro" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+              <label htmlFor="login-email" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Adresă de email</label>
+              <input id="login-email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="nume@companie.ro" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 dark:border-slate-700 dark:bg-slate-800 dark:text-white text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
             </div>
             <div>
-              <label htmlFor="login-password" className="mb-2 block text-sm font-semibold text-slate-700">Parolă</label>
+              <label htmlFor="login-password" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Parolă</label>
               <div className="relative">
-                <input id="login-password" type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="Introdu parola" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 pr-12 text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                <input id="login-password" type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="Introdu parola" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 dark:border-slate-700 dark:bg-slate-800 dark:text-white pr-12 text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Ascunde parola" : "Arată parola"} className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-700">{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button>
               </div>
             </div>
-            <label className="flex cursor-pointer items-center gap-3 text-sm text-slate-600">
+            <label className="flex cursor-pointer items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
               <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-blue-600" />
               Ține-mă minte timp de 30 de zile
             </label>
@@ -107,6 +109,11 @@ export default function LoginPage() {
             </button>
           </form>
           <div className="mt-10 flex items-center justify-center gap-2 text-xs text-slate-400"><ShieldCheck size={16} /> Conexiune securizată · Acces doar pentru utilizatori autorizați</div>
+        </div>
+        <div className="mx-auto mt-7 flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-800" aria-label="Aspect interfață">
+          {[{value:"light",label:"Zi",Icon:Sun},{value:"dark",label:"Noapte",Icon:Moon},{value:"system",label:"Automat",Icon:Monitor}].map(({value,label,Icon}) => (
+            <button key={value} type="button" onClick={() => setTheme(value)} aria-label={label} aria-pressed={theme === value} className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium transition-colors ${theme === value ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"}`}><Icon size={15}/>{label}</button>
+          ))}
         </div>
         <p className="mt-12 text-center text-xs text-slate-400 lg:hidden">© {new Date().getFullYear()} Devize Service</p>
       </main>
