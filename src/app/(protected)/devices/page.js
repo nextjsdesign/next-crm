@@ -115,7 +115,7 @@ const activeFilterCount = () => {
   // 🔄 Fetch fișe service
   const fetchDevices = async () => {
     try {
-      const res = await fetch("/api/devices", { cache: "no-store" });
+      const res = await fetch("/api/devices/list", { cache: "no-store" });
       const data = await res.json();
       if (Array.isArray(data)) {
         setDevices(data);
