@@ -28,7 +28,7 @@ export default function ProtectedLayout({ children }) {
   // 📱 MOBILE drawer
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // 🖥️ DESKTOP pinned sidebar
+  // Închide meniul mobil și la schimbarea rutei (inclusiv Back/Forward).\n  useEffect(() => {\n    setSidebarOpen(false);\n  }, [pathname]);\n\n  // 🖥️ DESKTOP pinned sidebar
   const [sidebarPinned, setSidebarPinned] = useState(true);
 
   // 🤏 hover expand
@@ -148,7 +148,7 @@ export default function ProtectedLayout({ children }) {
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
-      {/* ===================== SIDEBAR ===================== */}
+      {/* Fundalul închide meniul mobil la prima atingere. */}\n      {sidebarOpen && (\n        <button\n          type="button"\n          aria-label="Închide meniul"\n          className="fixed inset-0 z-40 bg-black/40 lg:hidden"\n          onClick={() => setSidebarOpen(false)}\n        />\n      )}\n      {/* ===================== SIDEBAR ===================== */}
       <aside
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -164,7 +164,7 @@ export default function ProtectedLayout({ children }) {
           w-64
         `}
       >
-        {/* LOGO */}
+        <button\n          type="button"\n          aria-label="Închide meniul"\n          onClick={() => setSidebarOpen(false)}\n          className="absolute top-3 right-3 rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700 lg:hidden"\n        >\n          <X size={20} />\n        </button>\n        {/* LOGO */}
         <div className="flex items-center gap-2 px-4 py-4 border-b dark:border-gray-700">
           <img
             src="/logo.png"
@@ -210,7 +210,7 @@ export default function ProtectedLayout({ children }) {
           {/* MOBILE */}
           <button
             className="lg:hidden p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={() => setSidebarOpen((open) => !open)}
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
