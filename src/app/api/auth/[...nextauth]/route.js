@@ -79,6 +79,7 @@ export const authOptions = {
         console.log("✅ Login OK for:", user.email);
 
         return {
+          rememberMe: credentials.rememberMe === "true",
           id: user.id,
           name: user.name,
           email: user.email,
@@ -94,15 +95,18 @@ export const authOptions = {
 
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60,
   },
 
   callbacks: {
     // JWT
     async jwt({ token, user }) {
       if (user) {
+        token.sessionExpiresAt = Date.now() + (user.rememberMe ? 30 : 1) * 24 * 60 * 60 * 1000;
         token.id = user.id;
         token.role = user.role;
       }
+      if (token.sessionExpiresAt && Date.now() >= token.sessionExpiresAt) return null;
       return token;
     },
 
