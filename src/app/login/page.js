@@ -47,7 +47,7 @@ export default function LoginPage() {
     }
 
     // 🔓 Login reușit
-    router.push("/devices");
+    router.replace("/dashboard");
   };
 
   return (
