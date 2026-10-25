@@ -134,10 +134,17 @@ export default function ProtectedLayout({ children }) {
       <Link
         href={item.href}
         onClick={() => setSidebarOpen(false)}
+        onTouchEnd={(event) => {
+          // Safari poate consuma prima atingere pentru :hover.
+          // Navigăm explicit pe touch și prevenim click-ul duplicat.
+          if (event.cancelable) event.preventDefault();
+          setSidebarOpen(false);
+          if (pathname !== item.href) router.push(item.href);
+        }}
         className={`
-          flex items-center transition-all rounded-lg
+          flex items-center touch-manipulation transition-colors rounded-lg
           ${expanded ? "px-4 py-2 gap-3" : "justify-center p-3"}
-          ${active ? "bg-blue-600 text-white" : "hover:bg-gray-100 dark:hover:bg-gray-700"}
+          ${active ? "bg-blue-600 text-white" : "lg:hover:bg-gray-100 dark:lg:hover:bg-gray-700"}
         `}
       >
         <Icon size={20} />
