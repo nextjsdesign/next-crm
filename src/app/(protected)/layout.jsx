@@ -233,7 +233,7 @@ export default function ProtectedLayout({ children }) {
               </button>
 
               {notifOpen && (
-                <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-gray-900 border dark:border-gray-700 shadow-xl rounded-xl p-2 z-50">
+                <div className="fixed top-16 right-3 left-3 sm:left-auto sm:right-6 sm:w-80 max-h-[min(24rem,calc(100dvh-5rem))] overflow-y-auto bg-white dark:bg-gray-900 border dark:border-gray-700 shadow-xl rounded-xl p-2 z-50">
                   {notifications.length === 0 && (
                     <p className="text-xs p-3 text-gray-500 text-center">
                       Nu ai notificări.
