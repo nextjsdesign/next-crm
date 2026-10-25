@@ -54,7 +54,14 @@ export default function ProtectedLayout({ children }) {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  // Închide dropdown-urile și la navigare, inclusiv Back/Forward.\n  useEffect(() => {\n    setDropdownOpen(false);\n    setNotifOpen(false);\n  }, [pathname]);\n\n  // Close avatar dropdown\n  useEffect(() => {
+  // Închide dropdown-urile și la navigare, inclusiv Back/Forward.
+  useEffect(() => {
+    setDropdownOpen(false);
+    setNotifOpen(false);
+  }, [pathname]);
+
+  // Close avatar dropdown
+  useEffect(() => {
     if (!dropdownOpen) return;
 
     const handler = (e) => {
