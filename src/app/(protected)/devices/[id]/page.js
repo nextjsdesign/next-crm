@@ -10,6 +10,11 @@ import {
   Smartphone,
   User,
   Wrench,
+  MessageCircle,
+  Pencil,
+  Printer,
+  Phone,
+  ChevronRight,
 } from "lucide-react";
 
 export default async function DeviceDetailsPage(props) {
@@ -48,111 +53,63 @@ export default async function DeviceDetailsPage(props) {
     }
   };
 
+  const rawPhone = (device.client?.phone || "").replace(/[^\d]/g, "");
+  const whatsappPhone = rawPhone.startsWith("0") ? "40" + rawPhone.slice(1) : rawPhone;
+  const whatsappText = `Bună ziua! Vă contactăm de la Devize Service în legătură cu fișa ${device.formCode || ""}.`;
+  const deviceLabel = [device.deviceType, device.brand, device.model].filter(Boolean).join(" ");
+  const formattedDate = new Date(device.createdAt).toLocaleDateString("ro-RO");
+  const formattedPrice = device.priceEstimate != null ? `${device.priceEstimate} RON` : "—";
+
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      {/* HEADER */}
-      <div className="flex items-center justify-between mb-8">
-
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-          <ClipboardList className="w-7 h-7 text-blue-600" />
-          Detalii fișă service
-        </h1>
-
-        {/* 🔵 Print + Back */}
-        <div className="flex items-center gap-3">
-
-          {/* 🖨️ PrintButton (CLIENT COMPONENT) */}
-          <PrintButton deviceId={id} />
-
-          <Link
-            href="/devices"
-            className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 
-            dark:bg-gray-700 dark:hover:bg-gray-600 px-4 py-2 rounded-lg 
-            text-gray-700 dark:text-gray-200 transition"
-          >
-            <ArrowLeft className="w-5 h-5" /> Înapoi
-          </Link>
-        </div>
+    <div className="mx-auto max-w-5xl space-y-4 px-0 py-1 sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300"><ArrowLeft size={18}/> Înapoi</Link>
+        <h1 className="text-base font-bold text-slate-900 dark:text-white sm:text-xl">Detalii fișă</h1>
+        <PrintButton deviceId={id} />
       </div>
 
-      {/* GRID INFO */}
-      <div className="grid md:grid-cols-2 gap-6">
-
-        {/* CLIENT */}
-        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 
-        border border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 
-          text-gray-800 dark:text-gray-100">
-            <User className="w-5 h-5 text-blue-500" /> Client
-          </h2>
-          <p><b>Nume:</b> {device.client?.name || "—"}</p>
-          <p><b>Telefon:</b> {device.client?.phone || "—"}</p>
-          <p><b>Email:</b> {device.client?.email || "—"}</p>
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <span className="rounded-full bg-slate-100 px-3 py-1 font-mono text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-white">{device.formCode || "Fișă service"}</span>
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusColor(device.status)}`}>{device.status || "—"}</span>
         </div>
-
-        {/* DEVICE */}
-        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 
-        border border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 
-          text-gray-800 dark:text-gray-100">
-            <Smartphone className="w-5 h-5 text-blue-500" /> Dispozitiv
-          </h2>
-          <p><b>Tip:</b> {device.deviceType || "—"}</p>
-          <p><b>Marcă:</b> {device.brand || "—"}</p>
-          <p><b>Model:</b> {device.model || "—"}</p>
-          <p><b>Serie:</b> {device.serialNumber || "—"}</p>
+        <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">{device.client?.name || "Client necunoscut"}</h2>
+        {device.client?.phone && <a href={`tel:${rawPhone}`} className="mt-1 inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400"><Phone size={14}/>{device.client.phone}</a>}
+        <p className="mt-3 text-sm font-medium text-slate-800 dark:text-slate-200">{deviceLabel || "Dispozitiv"}</p>
+        {device.serialNumber && <p className="mt-1 text-xs text-slate-500">SN: {device.serialNumber}</p>}
+        <div className="mt-4 rounded-xl bg-rose-50 px-3 py-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{device.problem || device.description || "Defect nespecificat"}</div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {[
+            { label: "Data intrării", value: formattedDate, icon: Calendar },
+            { label: "Preț estimat", value: formattedPrice, icon: ClipboardList },
+            { label: "Tehnician", value: device.technician || "—", icon: User },
+            { label: "Status", value: device.status || "—", icon: Wrench },
+          ].map((item) => {
+            const Icon = item.icon;
+            return <div key={item.label} className="min-w-0 rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40"><div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400"><Icon size={14}/>{item.label}</div><div className="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-white">{item.value}</div></div>;
+          })}
         </div>
+      </section>
 
-        {/* PROBLEMĂ */}
-        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 
-        border border-gray-200 dark:border-gray-700 md:col-span-2">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 
-          text-gray-800 dark:text-gray-100">
-            <Wrench className="w-5 h-5 text-blue-500" /> Descriere / Problemă
-          </h2>
-          <p>{device.problem || device.description || "—"}</p>
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">Observații și detalii</h3>
+        <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700 dark:bg-slate-900/40 dark:text-slate-200">{device.notes || "Nu există observații adăugate."}</div>
+        {device.client?.email && <p className="mt-3 text-xs text-slate-500">Email: {device.client.email}</p>}
+      </section>
 
-          {device.notes && (
-            <p className="text-sm italic text-gray-500 mt-2">
-              📝 Observații: {device.notes}
-            </p>
-          )}
+      {whatsappPhone ? (
+        <a href={`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(whatsappText)}`} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+          <MessageCircle size={19}/> Trimite mesaj WhatsApp
+        </a>
+      ) : <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-center text-xs text-amber-800">Clientul nu are un număr de telefon în fișă.</div>}
+
+      <section className="space-y-3">
+        <h3 className="text-base font-bold text-slate-900 dark:text-white">Acțiuni rapide</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <Link href={`/devices/${id}?edit=1`} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-center text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"><Pencil size={21}/> Editează fișa</Link>
+          <Link href={`/devices/${id}/repair`} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-center text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"><Wrench size={21}/> Fișă reparație</Link>
         </div>
-
-        {/* SERVICE DETAILS */}
-        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 
-        border border-gray-200 dark:border-gray-700 md:col-span-2">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 
-          text-gray-800 dark:text-gray-100">
-            <Calendar className="w-5 h-5 text-blue-500" /> Detalii service
-          </h2>
-          <div className="grid sm:grid-cols-2 gap-2">
-
-            <p><b>Cod fișă:</b> {device.formCode}</p>
-
-            <p><b>Data primirii:</b> 
-              {new Date(device.createdAt).toLocaleDateString("ro-RO")}
-            </p>
-
-            <p><b>Tehnician:</b> {device.technician || "—"}</p>
-
-            <p><b>Preț estimativ:</b> 
-              {device.priceEstimate ? `${device.priceEstimate} lei` : "—"}
-            </p>
-
-            <p><b>Status:</b> 
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-semibold 
-                ${getStatusColor(device.status)}`}
-              >
-                {device.status}
-              </span>
-            </p>
-
-          </div>
-        </div>
-
-      </div>
+      </section>
     </div>
   );
 }
