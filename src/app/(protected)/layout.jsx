@@ -214,10 +214,17 @@ export default function ProtectedLayout({ children }) {
         >
           <X size={20} />
         </button>
-        {/* LOGO */}
-        <div className={`flex h-[72px] shrink-0 items-center border-b border-slate-200 dark:border-slate-800 ${expanded ? "gap-3 px-4" : "justify-center px-2"}`}>
+        {/* LOGO — click revine la Dashboard */}
+        <Link
+          href="/dashboard"
+          aria-label="Mergi la Dashboard"
+          title="Înapoi la Dashboard"
+          onClick={() => setSidebarOpen(false)}
+          className={`flex h-[72px] shrink-0 items-center border-b border-slate-200 dark:border-slate-800 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 ${expanded ? "gap-3 px-4" : "justify-center px-2"}`}
+        >
           <img
             src="/logo.png"
+            alt="ProComputer"
             className={`${expanded ? "w-10 h-10" : "w-9 h-9 mx-auto"} object-contain transition-all`}
           />
           {expanded && (
@@ -225,7 +232,7 @@ export default function ProtectedLayout({ children }) {
               ProComputer
             </span>
           )}
-        </div>
+        </Link>
 
         {/* MENU */}
         <nav className="p-3 pt-5 space-y-1.5">
