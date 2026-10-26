@@ -34,7 +34,7 @@ export default function ProtectedLayout({ children }) {
   }, [pathname]);
 
   // 🖥️ DESKTOP pinned sidebar
-  const [sidebarPinned, setSidebarPinned] = useState(true);
+  const [sidebarPinned, setSidebarPinned] = useState(false);
 
   // 🤏 hover expand
   const [hovered, setHovered] = useState(false);
@@ -163,12 +163,12 @@ export default function ProtectedLayout({ children }) {
           if (pathname !== item.href) router.push(item.href);
         }}
         className={`
-          flex items-center touch-manipulation transition-colors rounded-lg
-          ${expanded ? "px-4 py-2 gap-3" : "justify-center p-3"}
-          ${active ? "bg-blue-600 text-white" : "lg:hover:bg-gray-100 dark:lg:hover:bg-gray-700"}
+          group flex items-center min-h-11 touch-manipulation transition-colors rounded-xl text-sm font-medium
+          ${expanded ? "px-3 py-2.5 gap-3" : "justify-center p-3"}
+          ${active ? "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300 shadow-sm ring-1 ring-blue-100 dark:ring-blue-500/20" : "text-slate-600 dark:text-slate-300 lg:hover:bg-slate-100 dark:lg:hover:bg-slate-700/70"}
         `}
       >
-        <Icon size={20} />
+        <Icon size={19} className="shrink-0" />
         {expanded && <span>{item.label}</span>}
       </Link>
     );
@@ -180,7 +180,7 @@ export default function ProtectedLayout({ children }) {
   const expanded = isDesktop ? sidebarPinned || hovered : true;
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 overflow-x-hidden">
       {/* Fundalul închide meniul mobil la prima atingere. */}
       {sidebarOpen && (
         <button
@@ -192,18 +192,18 @@ export default function ProtectedLayout({ children }) {
       )}
       {/* ===================== SIDEBAR ===================== */}
       <aside
-        onMouseEnter={() => setHovered(true)}
+        onMouseEnter={(event) => { if (event.nativeEvent?.pointerType !== "touch") setHovered(true); }}
         onMouseLeave={() => setHovered(false)}
         className={`
           fixed lg:static top-0 left-0 z-50
           h-screen lg:h-auto
-          border-r dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg
+          border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[2px_0_12px_rgba(15,23,42,0.03)]
           transition-all duration-300 flex flex-col
 
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-          ${expanded ? "lg:w-64" : "lg:w-20"}
+          ${expanded ? "lg:w-60" : "lg:w-[76px]"}
 
-          w-64
+          w-60
         `}
       >
         <button
@@ -215,20 +215,20 @@ export default function ProtectedLayout({ children }) {
           <X size={20} />
         </button>
         {/* LOGO */}
-        <div className="flex items-center gap-2 px-4 py-4 border-b dark:border-gray-700">
+        <div className={`flex h-[72px] shrink-0 items-center border-b border-slate-200 dark:border-slate-800 ${expanded ? "gap-3 px-4" : "justify-center px-2"}`}>
           <img
             src="/logo.png"
-            className={`${expanded ? "w-10 h-10" : "w-8 h-8 mx-auto"} transition-all`}
+            className={`${expanded ? "w-10 h-10" : "w-9 h-9 mx-auto"} object-contain transition-all`}
           />
           {expanded && (
-            <span className="font-bold text-lg text-gray-900 dark:text-white">
+            <span className="font-semibold tracking-tight text-base text-slate-900 dark:text-white">
               ProComputer
             </span>
           )}
         </div>
 
         {/* MENU */}
-        <nav className="p-3 space-y-1">
+        <nav className="p-3 pt-5 space-y-1.5">
           {navItems
             .filter((i) => i.roles.includes(session.user.role))
             .map((item) => (
@@ -238,12 +238,13 @@ export default function ProtectedLayout({ children }) {
       </aside>
 
       {/* ===================== PAGE AREA ===================== */}
-      <div className="flex-1 flex flex-col overflow-x-hidden">
+      <div className="min-w-0 flex-1 flex flex-col overflow-x-hidden">
         {/* ===================== NAVBAR ===================== */}
-        <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 shadow-md sticky top-0 z-20">
+        <header className="flex h-[72px] shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 dark:border-slate-800 dark:bg-slate-900 sticky top-0 z-20">
           {/* DESKTOP toggler */}
           <button
-            className="hidden lg:flex p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
+            aria-label={sidebarPinned ? "Restrânge meniul lateral" : "Fixează meniul lateral"}
+            className="hidden lg:flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             onClick={() => setSidebarPinned((prev) => !prev)}
           >
             {sidebarPinned ? (
@@ -259,13 +260,14 @@ export default function ProtectedLayout({ children }) {
 
           {/* MOBILE */}
           <button
-            className="lg:hidden p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
+            aria-label="Deschide meniul"
+            className="lg:hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             onClick={() => setSidebarOpen((open) => !open)}
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
-          <h1 className="font-semibold dark:text-gray-100">CRM Next</h1>
+          <div className="min-w-0 flex-1"><h1 className="truncate text-sm sm:text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100">Devize Service</h1><p className="hidden sm:block text-[11px] text-slate-500 dark:text-slate-400">Administrare service</p></div>
 
           <div className="flex items-center gap-3">
             {/* 🔔 NOTIFICATION BELL */}
