@@ -8,8 +8,6 @@ import {
   Moon,
   Sun,
   LayoutDashboard,
-  MoreHorizontal,
-  Monitor,
   Users,
   FileText,
   User,
@@ -419,20 +417,7 @@ export default function ProtectedLayout({ children }) {
           )}
 
         {/* ===================== PAGE CONTENT ===================== */}
-        <main className="flex-1 p-4 pb-24 sm:p-6 sm:pb-6">{children}</main>
-        {/* Navigare mobilă: păstrăm sidebarul existent pentru meniul complet. */}
-        <nav aria-label="Navigare principală mobil" className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t border-slate-200 bg-white/95 px-2 pt-2 pb-[max(env(safe-area-inset-bottom),8px)] shadow-[0_-5px_20px_rgba(15,23,42,0.05)] backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/95 sm:hidden">
-          {[
-            { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-            { href: "/devices", label: "Dispozitive", icon: Monitor },
-            { href: "/clients", label: "Clienți", icon: Users },
-          ].map((item) => {
-            const Icon = item.icon;
-            const active = pathname.startsWith(item.href);
-            return <Link key={item.href} href={item.href} className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg py-1 text-[10px] font-medium ${active ? "text-blue-600 dark:text-blue-400" : "text-slate-500 dark:text-slate-400"}`}><Icon size={21} /><span>{item.label}</span></Link>;
-          })}
-          <button type="button" onClick={() => setSidebarOpen(true)} className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg py-1 text-[10px] font-medium text-slate-500 dark:text-slate-400"><MoreHorizontal size={21}/><span>Mai multe</span></button>
-        </nav>
+        <main className="flex-1 p-4 sm:p-6">{children}</main>
 
 {/* TOASTER GLOBAL */}
 <Toaster
