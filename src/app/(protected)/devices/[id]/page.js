@@ -10,11 +10,8 @@ import {
   Smartphone,
   User,
   Wrench,
-  MessageCircle,
   Pencil,
-  Printer,
   Phone,
-  ChevronRight,
 } from "lucide-react";
 
 export default async function DeviceDetailsPage(props) {
@@ -29,7 +26,7 @@ export default async function DeviceDetailsPage(props) {
   try {
     device = await prisma.device.findUnique({
       where: { id },
-      include: { client: true },
+      include: { client: true, repairs: { include: { items: true, historyNotes: { include: { user: { select: { name: true } } }, orderBy: { createdAt: "desc" } } }, orderBy: { createdAt: "desc" }, take: 1 } },
     });
   } catch (err) {
     console.error("❌ Eroare Prisma:", err);
@@ -53,9 +50,11 @@ export default async function DeviceDetailsPage(props) {
     }
   };
 
-  const rawPhone = (device.client?.phone || "").replace(/[^\d]/g, "");
-  const whatsappPhone = rawPhone.startsWith("0") ? "40" + rawPhone.slice(1) : rawPhone;
-  const whatsappText = `Bună ziua! Vă contactăm de la Devize Service în legătură cu fișa ${device.formCode || ""}.`;
+  const repair = device.repairs?.[0] || null;
+  const query = await props.searchParams;
+  const activeTab = ["detalii", "diagnosticare", "interventii", "piese", "note"].includes(query?.tab) ? query.tab : "detalii";
+  const tabs = [{ id: "detalii", label: "Detalii" }, { id: "diagnosticare", label: "Diagnosticare" }, { id: "interventii", label: "Intervenții" }, { id: "piese", label: "Piese" }, { id: "note", label: "Note" }];
+  const dateTime = (value) => new Date(value).toLocaleString("ro-RO", { dateStyle: "short", timeStyle: "short" });
   const deviceLabel = [device.deviceType, device.brand, device.model].filter(Boolean).join(" ");
   const formattedDate = new Date(device.createdAt).toLocaleDateString("ro-RO");
   const formattedPrice = device.priceEstimate != null ? `${device.priceEstimate} RON` : "—";
@@ -74,7 +73,7 @@ export default async function DeviceDetailsPage(props) {
           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusColor(device.status)}`}>{device.status || "—"}</span>
         </div>
         <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">{device.client?.name || "Client necunoscut"}</h2>
-        {device.client?.phone && <a href={`tel:${rawPhone}`} className="mt-1 inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400"><Phone size={14}/>{device.client.phone}</a>}
+        {device.client?.phone && <a href={`tel:${device.client.phone}`} className="mt-1 inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400"><Phone size={14}/>{device.client.phone}</a>}
         <p className="mt-3 text-sm font-medium text-slate-800 dark:text-slate-200">{deviceLabel || "Dispozitiv"}</p>
         {device.serialNumber && <p className="mt-1 text-xs text-slate-500">SN: {device.serialNumber}</p>}
         <div className="mt-4 rounded-xl bg-rose-50 px-3 py-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{device.problem || device.description || "Defect nespecificat"}</div>
@@ -91,17 +90,39 @@ export default async function DeviceDetailsPage(props) {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">Observații și detalii</h3>
-        <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700 dark:bg-slate-900/40 dark:text-slate-200">{device.notes || "Nu există observații adăugate."}</div>
-        {device.client?.email && <p className="mt-3 text-xs text-slate-500">Email: {device.client.email}</p>}
-      </section>
+      <nav aria-label="Secțiuni fișă" className="flex gap-1 overflow-x-auto border-b border-slate-200 dark:border-slate-700">
+        {tabs.map((tab) => <Link key={tab.id} href={`/devices/${id}?tab=${tab.id}`} scroll={false} aria-current={activeTab === tab.id ? "page" : undefined} className={`shrink-0 border-b-2 px-3 py-3 text-xs font-medium transition-colors ${activeTab === tab.id ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-slate-500 dark:text-slate-400"}`}>{tab.label}</Link>)}
+      </nav>
 
-      {whatsappPhone ? (
-        <a href={`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(whatsappText)}`} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-          <MessageCircle size={19}/> Trimite mesaj WhatsApp
-        </a>
-      ) : <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-center text-xs text-amber-800">Clientul nu are un număr de telefon în fișă.</div>}
+      <section className="min-h-36 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        {activeTab === "detalii" && <div className="space-y-4">
+          <div><h3 className="text-sm font-semibold text-slate-900 dark:text-white">Descriere problemă</h3><p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{device.problem || device.description || "Nu există o descriere."}</p></div>
+          <div className="border-t border-slate-100 pt-3 dark:border-slate-700"><h3 className="text-sm font-semibold text-slate-900 dark:text-white">Informații suplimentare</h3><p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{device.receptionNotes || device.description || "—"}</p></div>
+        </div>}
+        {activeTab === "diagnosticare" && <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Defecte identificate / Diagnostic</h3>
+          <p className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-200">{repair?.diagnostic || "Nu există încă un diagnostic înregistrat."}</p>
+          {repair?.notes && <><h4 className="text-xs font-semibold text-slate-500">Observații tehnician</h4><p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">{repair.notes}</p></>}
+          <Link href={`/devices/${id}/repair`} className="block rounded-xl bg-blue-50 p-3 text-center text-sm font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Deschide fișa cu operațiuni</Link>
+        </div>}
+        {activeTab === "interventii" && <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Intervenții efectuate</h3>
+          {(repair?.items || []).filter((item) => item.kind === "labor").length ? (repair.items.filter((item) => item.kind === "labor").map((item) => <div key={item.id} className="rounded-xl border border-slate-100 p-3 dark:border-slate-700"><p className="text-sm font-semibold text-slate-900 dark:text-white">{item.label}</p><p className="mt-1 text-xs text-slate-500">{item.qty} × {item.unitPrice} RON</p></div>)) : <p className="text-sm text-slate-500">Nu există intervenții înregistrate.</p>}
+          <Link href={`/devices/${id}/repair`} className="block rounded-xl bg-blue-50 p-3 text-center text-sm font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Adaugă / editează intervenții</Link>
+        </div>}
+        {activeTab === "piese" && <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Piese utilizate</h3>
+          {(repair?.items || []).filter((item) => item.kind === "part").length ? (repair.items.filter((item) => item.kind === "part").map((item) => <div key={item.id} className="rounded-xl border border-slate-100 p-3 dark:border-slate-700"><p className="text-sm font-semibold text-slate-900 dark:text-white">{item.label}</p><p className="mt-1 text-xs text-slate-500">{item.qty} × {item.unitPrice} RON</p></div>)) : <p className="text-sm text-slate-500">Nu există piese înregistrate.</p>}
+          <Link href={`/devices/${id}/repair`} className="block rounded-xl bg-blue-50 p-3 text-center text-sm font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Gestionează piesele</Link>
+        </div>}
+        {activeTab === "note" && <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Note și observații</h3>
+          {device.notes && <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-200">{device.notes}</p>}
+          {(repair?.historyNotes || []).map((note) => <div key={note.id} className="rounded-xl border border-slate-100 p-3 dark:border-slate-700"><p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200">{note.message}</p><p className="mt-2 text-xs text-slate-500">{note.user?.name || "Tehnician"} · {dateTime(note.createdAt)}</p></div>)}
+          {!device.notes && !repair?.historyNotes?.length && <p className="text-sm text-slate-500">Nu există note înregistrate.</p>}
+          <Link href={`/devices/${id}/repair`} className="block rounded-xl bg-blue-50 p-3 text-center text-sm font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Adaugă notă în fișa cu operațiuni</Link>
+        </div>}
+      </section>
 
       <section className="space-y-3">
         <h3 className="text-base font-bold text-slate-900 dark:text-white">Acțiuni rapide</h3>
