@@ -112,29 +112,37 @@ const activeFilterCount = () => {
     }
   }, [visibleColumns]);
 
-  // 🔄 Fetch fișe service
+  // Afișează imediat ultima listă din sesiunea curentă, apoi o actualizează.
+  // Cache-ul este izolat pe utilizator și nu este păstrat pe disc.
+  const cachedDevicesRef = useRef(null);
   const fetchDevices = async () => {
     try {
       const res = await fetch("/api/devices/list", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (Array.isArray(data)) {
-        setDevices(data);
-      } else {
-        console.warn("Răspuns /api/devices neașteptat:", data);
-      }
+      if (!Array.isArray(data)) throw new Error("Răspuns invalid pentru fișe");
+      setDevices(data);
+      const cache = { userId: session?.user?.id, data, savedAt: Date.now() };
+      window.__devizeDevicesCache = cache;
+      cachedDevicesRef.current = cache;
     } catch (err) {
       console.error("Eroare la încărcarea fișelor:", err);
-      toast.error("Eroare la încărcarea fișelor de service");
+      toast.error("Nu am putut actualiza fișele de service");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!session) return;
+    if (!session?.user?.id) return;
+    const cache = window.__devizeDevicesCache;
+    if (cache?.userId === session.user.id && Array.isArray(cache.data)) {
+      setDevices(cache.data);
+      setLoading(false);
+    }
     fetchDevices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
+  }, [session?.user?.id]);
 
   // 🔒 închide popover-ele la click în afară
   useEffect(() => {

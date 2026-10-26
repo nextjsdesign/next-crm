@@ -28,6 +28,11 @@ export default function ProtectedLayout({ children }) {
   // 📱 MOBILE drawer
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Închide meniul mobil și la schimbarea rutei (inclusiv Back/Forward).
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
   // 🖥️ DESKTOP pinned sidebar
   const [sidebarPinned, setSidebarPinned] = useState(true);
 
@@ -43,11 +48,19 @@ export default function ProtectedLayout({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef(null);
+  const bellRef = useRef(null);
 
   // Redirect if not logged in
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
+
+  // Închide dropdown-urile și la navigare, inclusiv Back/Forward.
+  useEffect(() => {
+    setDropdownOpen(false);
+    setNotifOpen(false);
+  }, [pathname]);
 
   // Close avatar dropdown
   useEffect(() => {
@@ -66,6 +79,19 @@ export default function ProtectedLayout({ children }) {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [dropdownOpen]);
+
+  // Închide notificările la atingere/click în afara clopoțelului și panoului.
+  useEffect(() => {
+    if (!notifOpen) return;
+    const closeOutside = (event) => {
+      if (!notifRef.current?.contains(event.target) &&
+          !bellRef.current?.contains(event.target)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, [notifOpen]);
 
   // 🔔 Load notifications
   useEffect(() => {
@@ -129,10 +155,17 @@ export default function ProtectedLayout({ children }) {
       <Link
         href={item.href}
         onClick={() => setSidebarOpen(false)}
+        onTouchEnd={(event) => {
+          // Safari poate consuma prima atingere pentru :hover.
+          // Navigăm explicit pe touch și prevenim click-ul duplicat.
+          if (event.cancelable) event.preventDefault();
+          setSidebarOpen(false);
+          if (pathname !== item.href) router.push(item.href);
+        }}
         className={`
-          flex items-center transition-all rounded-lg
+          flex items-center touch-manipulation transition-colors rounded-lg
           ${expanded ? "px-4 py-2 gap-3" : "justify-center p-3"}
-          ${active ? "bg-blue-600 text-white" : "hover:bg-gray-100 dark:hover:bg-gray-700"}
+          ${active ? "bg-blue-600 text-white" : "lg:hover:bg-gray-100 dark:lg:hover:bg-gray-700"}
         `}
       >
         <Icon size={20} />
@@ -148,6 +181,15 @@ export default function ProtectedLayout({ children }) {
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
+      {/* Fundalul închide meniul mobil la prima atingere. */}
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Închide meniul"
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       {/* ===================== SIDEBAR ===================== */}
       <aside
         onMouseEnter={() => setHovered(true)}
@@ -164,6 +206,14 @@ export default function ProtectedLayout({ children }) {
           w-64
         `}
       >
+        <button
+          type="button"
+          aria-label="Închide meniul"
+          onClick={() => setSidebarOpen(false)}
+          className="absolute top-3 right-3 rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700 lg:hidden"
+        >
+          <X size={20} />
+        </button>
         {/* LOGO */}
         <div className="flex items-center gap-2 px-4 py-4 border-b dark:border-gray-700">
           <img
@@ -210,7 +260,7 @@ export default function ProtectedLayout({ children }) {
           {/* MOBILE */}
           <button
             className="lg:hidden p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={() => setSidebarOpen((open) => !open)}
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -221,6 +271,7 @@ export default function ProtectedLayout({ children }) {
             {/* 🔔 NOTIFICATION BELL */}
             <div className="relative">
               <button
+                ref={bellRef}
                 onClick={() => setNotifOpen(!notifOpen)}
                 className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
               >
@@ -233,7 +284,7 @@ export default function ProtectedLayout({ children }) {
               </button>
 
               {notifOpen && (
-                <div className="fixed top-16 right-3 left-3 sm:left-auto sm:right-6 sm:w-80 max-h-[min(24rem,calc(100dvh-5rem))] overflow-y-auto bg-white dark:bg-gray-900 border dark:border-gray-700 shadow-xl rounded-xl p-2 z-50">
+                <div ref={notifRef} className="fixed top-16 right-3 left-3 sm:left-auto sm:right-6 sm:w-80 max-h-[min(24rem,calc(100dvh-5rem))] overflow-y-auto bg-white dark:bg-gray-900 border dark:border-gray-700 shadow-xl rounded-xl p-2 z-50">
                   {notifications.length === 0 && (
                     <p className="text-xs p-3 text-gray-500 text-center">
                       Nu ai notificări.
@@ -332,19 +383,19 @@ export default function ProtectedLayout({ children }) {
               ref={dropdownRef}
               className="fixed top-16 right-4 z-[9999] w-44 bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-xl rounded-lg p-2"
             >
-              <Link href="/profile" className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <Link href="/profile" onClick={() => setDropdownOpen(false)} className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
                 Profil
               </Link>
 
               {session.user.role === "admin" && (
-                <Link href="/settings" className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <Link href="/settings" onClick={() => setDropdownOpen(false)} className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
                   Setări
                 </Link>
               )}
 
               <button
                 className="w-full text-left px-3 py-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={() => { setDropdownOpen(false); signOut({ callbackUrl: "/login" }); }}
               >
                 Delogare
               </button>

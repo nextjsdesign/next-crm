@@ -19,9 +19,23 @@ function generateFormCode(length = 5) {
 export async function GET() {
   try {
     const devices = await prisma.device.findMany({
-      include: {
-        client: true,
-        user: true,
+      // Only fields used by the dashboard and mobile cards.
+      // In particular, never serialize the related user's password.
+      select: {
+        id: true,
+        formCode: true,
+        status: true,
+        deviceType: true,
+        brand: true,
+        model: true,
+        serialNumber: true,
+        problem: true,
+        description: true,
+        technician: true,
+        priceEstimate: true,
+        createdAt: true,
+        client: { select: { id: true, name: true, phone: true } },
+        user: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: "desc" },
     });
