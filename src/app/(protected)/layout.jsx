@@ -222,8 +222,14 @@ export default function ProtectedLayout({ children }) {
           onClick={() => setSidebarOpen(false)}
           className={`flex h-[72px] shrink-0 items-center border-b border-slate-200 dark:border-slate-800 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 ${expanded ? "gap-3 px-4" : "justify-center px-2"}`}
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-white shadow-sm dark:bg-slate-700">
-            <FileText size={21} strokeWidth={2.2} aria-hidden="true" />
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#292d30] text-white shadow-sm" aria-hidden="true">
+            <svg viewBox="0 0 64 64" className="h-9 w-9" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 9l8 3 3 8-6 6-8-3-3-8 6 2z" fill="white" />
+              <path d="M20 22l33 33" stroke="white" strokeWidth="9" strokeLinecap="round" />
+              <path d="M53 55l-4-10-6 6z" fill="white" />
+              <path d="M52 7a15 15 0 0 0-17 18L9 51a5 5 0 0 0 7 7l26-26A15 15 0 0 0 58 14l-9 9-8-2-2-8z" fill="white" />
+              <circle cx="52" cy="52" r="2" fill="#292d30" />
+            </svg>
           </span>
           {expanded && (
             <span className="font-semibold tracking-tight text-base text-slate-900 dark:text-white">
