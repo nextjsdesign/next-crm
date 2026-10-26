@@ -48,6 +48,8 @@ export default function ProtectedLayout({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef(null);
+  const bellRef = useRef(null);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -77,6 +79,19 @@ export default function ProtectedLayout({ children }) {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [dropdownOpen]);
+
+  // Închide notificările la atingere/click în afara clopoțelului și panoului.
+  useEffect(() => {
+    if (!notifOpen) return;
+    const closeOutside = (event) => {
+      if (!notifRef.current?.contains(event.target) &&
+          !bellRef.current?.contains(event.target)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, [notifOpen]);
 
   // 🔔 Load notifications
   useEffect(() => {
@@ -256,6 +271,7 @@ export default function ProtectedLayout({ children }) {
             {/* 🔔 NOTIFICATION BELL */}
             <div className="relative">
               <button
+                ref={bellRef}
                 onClick={() => setNotifOpen(!notifOpen)}
                 className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
               >
@@ -268,7 +284,7 @@ export default function ProtectedLayout({ children }) {
               </button>
 
               {notifOpen && (
-                <div className="fixed top-16 right-3 left-3 sm:left-auto sm:right-6 sm:w-80 max-h-[min(24rem,calc(100dvh-5rem))] overflow-y-auto bg-white dark:bg-gray-900 border dark:border-gray-700 shadow-xl rounded-xl p-2 z-50">
+                <div ref={notifRef} className="fixed top-16 right-3 left-3 sm:left-auto sm:right-6 sm:w-80 max-h-[min(24rem,calc(100dvh-5rem))] overflow-y-auto bg-white dark:bg-gray-900 border dark:border-gray-700 shadow-xl rounded-xl p-2 z-50">
                   {notifications.length === 0 && (
                     <p className="text-xs p-3 text-gray-500 text-center">
                       Nu ai notificări.
