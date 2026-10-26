@@ -14,12 +14,6 @@ import {
   Trash2,
   Plus,
   Wrench,
-  ClipboardList,
-  CheckCircle2,
-  AlertTriangle,
-  Clock3,
-  PackageCheck,
-  Activity,
 } from "lucide-react";
 
 const STATUS_TABS = [
@@ -286,27 +280,6 @@ export default function DevicesPage() {
     startIndex + ITEMS_PER_PAGE
   );
 
-  // Rezumatul folosește exclusiv fișele reale deja încărcate.
-  const countStatus = (value) => devices.filter((d) => d.status === value).length;
-  const activeCount = devices.filter((d) => d.status !== "Predat" && d.status !== "Refuzat" && d.status !== "Nspf").length;
-  const overdueDiagnostics = devices.filter((d) => {
-    if (d.status !== "Diagnosticare" || !d.createdAt) return false;
-    const entered = new Date(d.createdAt).getTime();
-    return Number.isFinite(entered) && Date.now() - entered > 3 * 24 * 60 * 60 * 1000;
-  }).length;
-  const attentionCards = [
-    { label: "Diagnosticare peste 3 zile", count: overdueDiagnostics, color: "text-red-700 dark:text-red-300", bg: "bg-red-50 dark:bg-red-950/30", icon: AlertTriangle, filter: "Diagnosticare" },
-    { label: "Așteaptă piese", count: countStatus("Așteaptă piese"), color: "text-amber-700 dark:text-amber-300", bg: "bg-amber-50 dark:bg-amber-950/30", icon: Clock3, filter: "Așteaptă piese" },
-    { label: "În lucru", count: countStatus("În lucru"), color: "text-blue-700 dark:text-blue-300", bg: "bg-blue-50 dark:bg-blue-950/30", icon: Wrench, filter: "În lucru" },
-    { label: "Gata de predat", count: countStatus("Finalizat"), color: "text-violet-700 dark:text-violet-300", bg: "bg-violet-50 dark:bg-violet-950/30", icon: PackageCheck, filter: "Finalizat" },
-  ];
-  const overviewCards = [
-    { label: "În service", count: activeCount, icon: ClipboardList, color: "bg-blue-600", filter: "all" },
-    { label: "În diagnosticare", count: countStatus("Diagnosticare"), icon: Search, color: "bg-orange-500", filter: "Diagnosticare" },
-    { label: "Finalizate", count: countStatus("Finalizat"), icon: CheckCircle2, color: "bg-emerald-600", filter: "Finalizat" },
-    { label: "Predate", count: countStatus("Predat"), icon: PackageCheck, color: "bg-violet-600", filter: "Predat" },
-  ];
-
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     const d = new Date(dateString);
@@ -354,48 +327,17 @@ export default function DevicesPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-5">
-      {/* Atelier: overview responsive, valori calculate din fișele reale */}
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-400">Panou de control</p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Dashboard service</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Situația actuală a dispozitivelor și lucrările care necesită atenție.</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-            {new Date().toLocaleDateString("ro-RO", { day: "numeric", month: "long", year: "numeric" })}
-          </div>
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text:white">
+            Fișe Service
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Vizualizezi și filtrezi fișele de service pentru clienți.
+          </p>
         </div>
-
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          {overviewCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <button key={card.label} type="button" onClick={() => setStatusFilter(card.filter)}
-                className={`flex min-w-0 flex-col gap-3 rounded-2xl border bg-white p-3 text-left shadow-sm transition-colors hover:border-blue-300 sm:p-4 dark:bg-slate-900 dark:hover:border-blue-500 ${statusFilter === card.filter ? "border-blue-400 dark:border-blue-500" : "border-slate-200 dark:border-slate-800"}`}>
-                <span className={`flex h-10 w-10 items-center justify-center rounded-xl text-white ${card.color}`}><Icon size={20} /></span>
-                <span className="min-w-0"><span className="block text-xs font-medium text-slate-500 dark:text-slate-400">{card.label}</span><strong className="mt-1 block text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{card.count}</strong></span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white"><AlertTriangle size={17} className="text-orange-500" /> Lucrări care necesită atenție</h2>
-            <span className="text-xs text-slate-400">Apasă pentru filtrare</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-            {attentionCards.map((card) => {
-              const Icon = card.icon;
-              return <button key={card.label} type="button" onClick={() => setStatusFilter(card.filter)} className={`flex min-w-0 items-center justify-between gap-2 rounded-xl p-3 text-left transition-opacity hover:opacity-80 ${card.bg}`}>
-                <span className="min-w-0"><span className={`block text-xs font-medium ${card.color}`}>{card.label}</span><strong className={`mt-2 block text-xl font-bold tabular-nums ${card.color}`}>{card.count}</strong></span><Icon size={18} className={`shrink-0 ${card.color}`} />
-              </button>;
-            })}
-          </div>
-          <p className="mt-3 text-[11px] text-slate-400">Întârzierea diagnosticării este estimată de la data intrării în service (3 zile calendaristice).</p>
-        </div>
-      </section>
+      </div>
 
       {/* STATUS TABS – stil din Settings */}
       <div className="w-full flex justify-center">
