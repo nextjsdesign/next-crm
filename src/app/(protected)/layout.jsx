@@ -224,12 +224,12 @@ export default function ProtectedLayout({ children }) {
         >
           <img
             src="/logo.png"
-            alt="ProComputer"
+            alt="Devize Service"
             className={`${expanded ? "w-10 h-10" : "w-9 h-9 mx-auto"} object-contain transition-all`}
           />
           {expanded && (
             <span className="font-semibold tracking-tight text-base text-slate-900 dark:text-white">
-              ProComputer
+              Devize Service
             </span>
           )}
         </Link>
