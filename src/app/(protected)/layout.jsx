@@ -222,11 +222,9 @@ export default function ProtectedLayout({ children }) {
           onClick={() => setSidebarOpen(false)}
           className={`flex h-[72px] shrink-0 items-center border-b border-slate-200 dark:border-slate-800 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 ${expanded ? "gap-3 px-4" : "justify-center px-2"}`}
         >
-          <img
-            src="/logo.png"
-            alt="Devize Service"
-            className={`${expanded ? "w-10 h-10" : "w-9 h-9 mx-auto"} object-contain transition-all`}
-          />
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-white shadow-sm dark:bg-slate-700">
+            <FileText size={21} strokeWidth={2.2} aria-hidden="true" />
+          </span>
           {expanded && (
             <span className="font-semibold tracking-tight text-base text-slate-900 dark:text-white">
               Devize Service
