@@ -921,7 +921,7 @@ export default function DevicesPage() {
           </div>
 
           {/* 📱 Mobile cards */}
-          <div className="sm:hidden space-y-4">
+          <div className="sm:hidden space-y-2">
             {paginatedDevices.map((d, index) => {
               const clientName =
                 d.clientName ||
@@ -948,104 +948,32 @@ export default function DevicesPage() {
               const formCode = d.formCode || d.id || "-";
 
               return (
-                <div
+                <article
                   key={d.id || index}
-                  className="border border-gray-200 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-800 shadow-sm p-4 space-y-3 w-full"
+                  className="w-full overflow-hidden rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-800"
                 >
-                  {/* HEADER */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      {/* CLIENT */}
-                      <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                        COD FIȘĂ · CLIENT
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-100">
-                          {formCode}
-                        </span>
-                        <h2 className="font-semibold text-gray-900 dark:text-gray-50 truncate">
-                          {clientName}
-                        </h2>
-                      </div>
-
-                      {/* DEVICE */}
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                        {deviceLabel}
-                      </p>
+                  <button type="button" onClick={() => d.id && router.push(`/devices/${d.id}`)} className="block w-full text-left">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-100">{formCode}</span>
+                      <span className={`max-w-[48%] truncate rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusBadge(d.status)}`}>{d.status || "—"}</span>
                     </div>
-
-                    {/* STATUS BADGE */}
-                    <span
-                      className={`px-2 py-1 rounded-full text-[11px] font-medium ${statusBadge(
-                        d.status
-                      )}`}
-                    >
-                      {d.status || "—"}
-                    </span>
-                  </div>
-
-                  {/* DEFECT */}
-                  <div>
-                    <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                      DEFECT RECLAMAT
-                    </p>
-                    <p className="text-sm text-gray-800 dark:text-gray-200 font-medium line-clamp-2">
-                      {defect}
-                    </p>
-                  </div>
-
-                  {/* TEHNICIAN + PREȚ */}
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <p className="text-gray-500 dark:text-gray-400">
-                        Tehnician
-                      </p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
-                        {technician}
-                      </p>
+                    <h2 className="mt-1.5 truncate text-[14px] font-semibold leading-5 text-slate-900 dark:text-white">{clientName}</h2>
+                    <p className="truncate text-[12px] leading-5 text-slate-500 dark:text-slate-300">{deviceLabel}</p>
+                    {defect && defect !== "-" && <p className="mt-1 truncate rounded-md bg-slate-50 px-2 py-1 text-[11px] text-slate-600 dark:bg-slate-700/60 dark:text-slate-200">{defect}</p>}
+                  </button>
+                  <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-100 pt-1.5 dark:border-slate-700">
+                    <div className="min-w-0 text-[10px] text-slate-500 dark:text-slate-400">
+                      <span>{formatDate(d.createdAt)}</span>
+                      <span className="mx-1">·</span>
+                      <span className="inline-block max-w-[95px] truncate align-bottom">{technician}</span>
                     </div>
-
-                    <div className="text-right">
-                      <p className="text-gray-500 dark:text-gray-400">
-                        Preț estimat
-                      </p>
-                      <p className="font-semibold text-gray-900 dark:text-gray-100">
-                        {formatPrice(price)}
-                      </p>
+                    <strong className="shrink-0 text-[12px] text-slate-900 dark:text-white">{formatPrice(price)}</strong>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <ActionIconButton icon={Eye} title="Deschide fișa" onClick={() => d.id && router.push(`/devices/${d.id}`)} />
+                      <ActionIconButton icon={Wrench} title="Operațiuni" onClick={() => d.id && router.push(`/devices/${d.id}/repair`)} />
                     </div>
                   </div>
-
-                  {/* DATE + ACTIONS — aceeași linie */}
-                  <div className="flex items-center justify-between pt-2 mt-1 border-t border-dashed border-gray-200 dark:border-gray-700">
-                    {/* DATA ÎN STÂNGA */}
-                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                      {formatDate(d.createdAt)}
-                    </span>
-
-                    {/* ACTIONS ÎN DREAPTA */}
-                    <div className="flex items-center gap-2">
-                      <ActionIconButton
-                        icon={Eye}
-                        title="Deschide fișa"
-                        onClick={() => d.id && router.push(`/devices/${d.id}`)}
-                      />
-                      <ActionIconButton
-                        icon={Pencil}
-                        title="Editează"
-                        onClick={() =>
-                          d.id && router.push(`/devices/${d.id}?edit=1`)
-                        }
-                      />
-                      <ActionIconButton
-                        icon={Wrench}
-                        title="Fișă reparație"
-                        onClick={() =>
-                          d.id && router.push(`/devices/${d.id}/repair`)
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
+                </article>
               );
             })}
           </div>
